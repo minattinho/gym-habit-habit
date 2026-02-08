@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ interface Workout {
 
 export default function WorkoutsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteWorkoutId, setDeleteWorkoutId] = useState<string | null>(null);
 
@@ -102,22 +103,41 @@ export default function WorkoutsPage() {
       if (exercisesError) throw exercisesError;
 
       if (exercises && exercises.length > 0) {
-        const newExercises = exercises.map((ex) => ({
-          workout_id: newWorkout.id,
-          exercise_id: ex.exercise_id,
-          sets_count: ex.sets_count,
-          target_reps: ex.target_reps,
-          target_weight: ex.target_weight,
-          rest_seconds: ex.rest_seconds,
-          order_index: ex.order_index,
-          notes: ex.notes,
-        }));
+        for (const ex of exercises) {
+          const { data: newExercise, error: insertError } = await supabase
+            .from("workout_exercises")
+            .insert({
+              workout_id: newWorkout.id,
+              exercise_id: ex.exercise_id,
+              sets_count: ex.sets_count,
+              target_reps: ex.target_reps,
+              target_weight: ex.target_weight,
+              rest_seconds: ex.rest_seconds,
+              order_index: ex.order_index,
+              notes: ex.notes,
+            })
+            .select()
+            .single();
 
-        const { error: insertError } = await supabase
-          .from("workout_exercises")
-          .insert(newExercises);
+          if (insertError) throw insertError;
 
-        if (insertError) throw insertError;
+          // Copy sets
+          const { data: existingSets } = await supabase
+            .from("workout_sets")
+            .select("*")
+            .eq("workout_exercise_id", ex.id);
+
+          if (existingSets && existingSets.length > 0) {
+            const newSets = existingSets.map(s => ({
+              workout_exercise_id: newExercise.id,
+              reps: s.reps,
+              weight: s.weight,
+              order_index: s.order_index
+            }));
+
+            await supabase.from("workout_sets").insert(newSets);
+          }
+        }
       }
 
       return newWorkout;
@@ -170,20 +190,38 @@ export default function WorkoutsPage() {
 
         if (seError) throw seError;
 
-        // Create empty sets
-        const sets = Array.from({ length: we.sets_count }, (_, i) => ({
-          session_exercise_id: sessionExercise.id,
-          order_index: i,
-          weight: we.target_weight,
-          reps: we.target_reps,
-          is_completed: false,
-        }));
+        // Check for specific workout sets
+        const { data: specificSets } = await supabase
+          .from("workout_sets")
+          .select("*")
+          .eq("workout_exercise_id", we.id)
+          .order("order_index");
+
+        let sets;
+        if (specificSets && specificSets.length > 0) {
+          sets = specificSets.map((s, i) => ({
+            session_exercise_id: sessionExercise.id,
+            order_index: i,
+            weight: s.weight,
+            reps: s.reps,
+            is_completed: false,
+          }));
+        } else {
+          // Create empty sets (Legacy fallback)
+          sets = Array.from({ length: we.sets_count }, (_, i) => ({
+            session_exercise_id: sessionExercise.id,
+            order_index: i,
+            weight: we.target_weight,
+            reps: we.target_reps,
+            is_completed: false,
+          }));
+        }
 
         await supabase.from("session_sets").insert(sets);
       }
 
       // Navigate to session
-      window.location.href = `/session/${session.id}`;
+      navigate(`/session/${session.id}`);
     } catch (error) {
       console.error("Error starting session:", error);
       toast.error("Erro ao iniciar treino");

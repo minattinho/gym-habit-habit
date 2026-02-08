@@ -8,17 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Trash2, Loader2, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X } from "lucide-react";
 import { toast } from "sonner";
 import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
+
+interface WorkoutSet {
+  reps: number | null;
+  weight: number | null;
+}
 
 interface WorkoutExercise {
   id?: string;
   exercise_id: string;
   exercise_name: string;
-  sets_count: number;
-  target_reps: number | null;
-  target_weight: number | null;
+  sets: WorkoutSet[];
   rest_seconds: number | null;
   order_index: number;
 }
@@ -67,21 +70,45 @@ export default function WorkoutFormPage() {
 
       if (exercisesError) throw exercisesError;
 
+      // Fetch sets for each exercise
+      const exercisesWithSets = await Promise.all(
+        workoutExercises.map(async (we) => {
+          const { data: sets, error: setsError } = await supabase
+            .from("workout_sets")
+            .select("*")
+            .eq("workout_exercise_id", we.id)
+            .order("order_index");
+
+          if (sets && sets.length > 0) {
+            return {
+              id: we.id,
+              exercise_id: we.exercise_id,
+              exercise_name: (we.exercises as any)?.name || "Exercício",
+              sets: sets.map((s) => ({ reps: s.reps, weight: s.weight })),
+              rest_seconds: we.rest_seconds,
+              order_index: we.order_index,
+            };
+          } else {
+            // Fallback for old data structure (migration on the fly)
+            return {
+              id: we.id,
+              exercise_id: we.exercise_id,
+              exercise_name: (we.exercises as any)?.name || "Exercício",
+              sets: Array.from({ length: we.sets_count }).map(() => ({
+                reps: we.target_reps,
+                weight: we.target_weight,
+              })),
+              rest_seconds: we.rest_seconds,
+              order_index: we.order_index,
+            };
+          }
+        })
+      );
+
       setName(workout.name);
       setDescription(workout.description || "");
       setColor(workout.color || COLORS[0]);
-      setExercises(
-        workoutExercises.map((we) => ({
-          id: we.id,
-          exercise_id: we.exercise_id,
-          exercise_name: (we.exercises as any)?.name || "Exercício",
-          sets_count: we.sets_count,
-          target_reps: we.target_reps,
-          target_weight: we.target_weight,
-          rest_seconds: we.rest_seconds,
-          order_index: we.order_index,
-        }))
-      );
+      setExercises(exercisesWithSets);
 
       return workout;
     },
@@ -90,6 +117,8 @@ export default function WorkoutFormPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      let workoutId = id;
+
       if (isEditing) {
         // Update workout
         const { error: workoutError } = await supabase
@@ -99,27 +128,10 @@ export default function WorkoutFormPage() {
 
         if (workoutError) throw workoutError;
 
-        // Delete existing exercises
+        // Delete existing exercises (cascade should delete sets, but we can be safe)
+        // Note: cascading delete on workout_exercises -> workout_sets is assumed or we delete manually if logic requires
+        // Ideally we would sync, but deleting all and re-inserting is easier for now given the complexity
         await supabase.from("workout_exercises").delete().eq("workout_id", id);
-
-        // Insert new exercises
-        if (exercises.length > 0) {
-          const { error: exercisesError } = await supabase
-            .from("workout_exercises")
-            .insert(
-              exercises.map((ex, index) => ({
-                workout_id: id,
-                exercise_id: ex.exercise_id,
-                sets_count: ex.sets_count,
-                target_reps: ex.target_reps,
-                target_weight: ex.target_weight,
-                rest_seconds: ex.rest_seconds,
-                order_index: index,
-              }))
-            );
-
-          if (exercisesError) throw exercisesError;
-        }
       } else {
         // Create workout
         const { data: workout, error: workoutError } = await supabase
@@ -129,24 +141,43 @@ export default function WorkoutFormPage() {
           .single();
 
         if (workoutError) throw workoutError;
+        workoutId = workout.id;
+      }
 
-        // Insert exercises
-        if (exercises.length > 0) {
-          const { error: exercisesError } = await supabase
-            .from("workout_exercises")
+      if (!workoutId) throw new Error("No workout ID");
+
+      // Insert new exercises and sets
+      for (const [index, ex] of exercises.entries()) {
+        const { data: we, error: weError } = await supabase
+          .from("workout_exercises")
+          .insert({
+            workout_id: workoutId,
+            exercise_id: ex.exercise_id,
+            sets_count: ex.sets.length,
+            // Keep generic targets mainly for backward compat/summary if needed, or null
+            target_reps: null,
+            target_weight: null,
+            rest_seconds: ex.rest_seconds,
+            order_index: index,
+          })
+          .select()
+          .single();
+
+        if (weError) throw weError;
+
+        if (ex.sets.length > 0) {
+          const { error: setsError } = await supabase
+            .from("workout_sets")
             .insert(
-              exercises.map((ex, index) => ({
-                workout_id: workout.id,
-                exercise_id: ex.exercise_id,
-                sets_count: ex.sets_count,
-                target_reps: ex.target_reps,
-                target_weight: ex.target_weight,
-                rest_seconds: ex.rest_seconds,
-                order_index: index,
+              ex.sets.map((s, i) => ({
+                workout_exercise_id: we.id,
+                reps: s.reps,
+                weight: s.weight,
+                order_index: i,
               }))
             );
 
-          if (exercisesError) throw exercisesError;
+          if (setsError) throw setsError;
         }
       }
     },
@@ -167,9 +198,11 @@ export default function WorkoutFormPage() {
       {
         exercise_id: exerciseId,
         exercise_name: exerciseName,
-        sets_count: 3,
-        target_reps: 12,
-        target_weight: null,
+        sets: [
+          { reps: 12, weight: null },
+          { reps: 12, weight: null },
+          { reps: 12, weight: null },
+        ],
         rest_seconds: 90,
         order_index: exercises.length,
       },
@@ -177,10 +210,28 @@ export default function WorkoutFormPage() {
     setShowExerciseSelector(false);
   };
 
-  const updateExercise = (index: number, updates: Partial<WorkoutExercise>) => {
-    setExercises(
-      exercises.map((ex, i) => (i === index ? { ...ex, ...updates } : ex))
-    );
+  const updateSet = (exerciseIndex: number, setIndex: number, field: keyof WorkoutSet, value: number | null) => {
+    const newExercises = [...exercises];
+    newExercises[exerciseIndex].sets[setIndex][field] = value;
+    setExercises(newExercises);
+  };
+
+  const addSet = (exerciseIndex: number) => {
+    const newExercises = [...exercises];
+    const previousSet = newExercises[exerciseIndex].sets[newExercises[exerciseIndex].sets.length - 1];
+    newExercises[exerciseIndex].sets.push({
+      reps: previousSet ? previousSet.reps : 12,
+      weight: previousSet ? previousSet.weight : null
+    });
+    setExercises(newExercises);
+  };
+
+  const removeSet = (exerciseIndex: number, setIndex: number) => {
+    const newExercises = [...exercises];
+    if (newExercises[exerciseIndex].sets.length > 1) {
+      newExercises[exerciseIndex].sets.splice(setIndex, 1);
+      setExercises(newExercises);
+    }
   };
 
   const removeExercise = (index: number) => {
@@ -205,7 +256,7 @@ export default function WorkoutFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="container flex h-14 max-w-2xl items-center gap-4 px-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -254,9 +305,8 @@ export default function WorkoutFormPage() {
                     <button
                       key={c}
                       type="button"
-                      className={`h-8 w-8 rounded-full transition-transform ${
-                        color === c ? "scale-125 ring-2 ring-white" : ""
-                      }`}
+                      className={`h-8 w-8 rounded-full transition-transform ${color === c ? "scale-125 ring-2 ring-white" : ""
+                        }`}
                       style={{ backgroundColor: c }}
                       onClick={() => setColor(c)}
                     />
@@ -285,72 +335,81 @@ export default function WorkoutFormPage() {
                   Nenhum exercício adicionado
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {exercises.map((exercise, index) => (
+                <div className="space-y-6">
+                  {exercises.map((exercise, exerciseIndex) => (
                     <div
-                      key={index}
-                      className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
+                      key={exerciseIndex}
+                      className="rounded-lg border border-border bg-card overflow-hidden"
                     >
-                      <GripVertical className="mt-1 h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1 space-y-3">
-                        <p className="font-medium">{exercise.exercise_name}</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Séries</Label>
+                      <div className="flex items-center justify-between bg-muted/30 p-3 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{exercise.exercise_name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => removeExercise(exerciseIndex)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="p-3 space-y-2">
+                        <div className="grid grid-cols-[32px_1fr_1fr_32px] gap-2 mb-1 px-1">
+                          <span className="text-xs text-center text-muted-foreground font-medium">#</span>
+                          <span className="text-xs text-center text-muted-foreground font-medium">Reps</span>
+                          <span className="text-xs text-center text-muted-foreground font-medium">Carga (kg)</span>
+                          <span></span>
+                        </div>
+
+                        {exercise.sets.map((set, setIndex) => (
+                          <div key={setIndex} className="grid grid-cols-[32px_1fr_1fr_32px] gap-2 items-center">
+                            <span className="text-sm text-center font-medium bg-muted/50 rounded h-8 flex items-center justify-center">
+                              {setIndex + 1}
+                            </span>
                             <Input
                               type="number"
                               inputMode="numeric"
-                              value={exercise.sets_count}
-                              onChange={(e) =>
-                                updateExercise(index, {
-                                  sets_count: parseInt(e.target.value) || 1,
-                                })
-                              }
-                              min={1}
-                              className="h-9"
+                              value={set.reps || ""}
+                              onChange={(e) => updateSet(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || null)}
+                              className="h-8 text-center"
+                              placeholder="0"
                             />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Reps</Label>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              value={exercise.target_reps || ""}
-                              onChange={(e) =>
-                                updateExercise(index, {
-                                  target_reps: parseInt(e.target.value) || null,
-                                })
-                              }
-                              placeholder="12"
-                              className="h-9"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Peso (kg)</Label>
                             <Input
                               type="number"
                               inputMode="decimal"
-                              value={exercise.target_weight || ""}
-                              onChange={(e) =>
-                                updateExercise(index, {
-                                  target_weight: parseFloat(e.target.value) || null,
-                                })
-                              }
+                              value={set.weight || ""}
+                              onChange={(e) => updateSet(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || null)}
+                              className="h-8 text-center"
                               placeholder="—"
-                              className="h-9"
                             />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeSet(exerciseIndex, setIndex)}
+                              disabled={exercise.sets.length <= 1}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </div>
+                        ))}
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2 border-dashed"
+                          onClick={() => addSet(exerciseIndex)}
+                        >
+                          <Plus className="mr-1 h-3 w-3" />
+                          Adicionar Série
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => removeExercise(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>

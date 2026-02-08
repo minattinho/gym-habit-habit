@@ -19,22 +19,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RestTimer } from "@/components/RestTimer";
 
-interface SessionSet {
-  id: string;
-  order_index: number;
-  weight: number | null;
-  reps: number | null;
-  is_completed: boolean;
-}
-
-interface SessionExercise {
-  id: string;
-  exercise_id: string;
-  exercise_name: string;
-  order_index: number;
-  session_sets: SessionSet[];
-}
+import { checkAndSubmitPRs, SessionSet, SessionExercise } from "@/lib/pr";
 
 export default function SessionPage() {
   const { id } = useParams();
@@ -100,6 +87,11 @@ export default function SessionPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [restDuration, setRestDuration] = useState(60);
+
+  // ... (existing code)
+
   const updateSetMutation = useMutation({
     mutationFn: async ({
       setId,
@@ -115,8 +107,11 @@ export default function SessionPage() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["session", id] });
+      if (variables.updates.is_completed) {
+        setShowRestTimer(true);
+      }
     },
   });
 
@@ -155,31 +150,10 @@ export default function SessionPage() {
       if (error) throw error;
 
       // Check for PRs
-      for (const exercise of session?.exercises || []) {
-        for (const set of exercise.session_sets) {
-          if (set.is_completed && set.weight && set.reps) {
-            // Check if this is a PR
-            const { data: existingPR } = await supabase
-              .from("personal_records")
-              .select("weight, reps")
-              .eq("user_id", user?.id)
-              .eq("exercise_id", exercise.exercise_id)
-              .order("weight", { ascending: false })
-              .limit(1)
-              .single();
-
-            if (!existingPR || set.weight > existingPR.weight) {
-              // New PR!
-              await supabase.from("personal_records").insert({
-                user_id: user?.id,
-                exercise_id: exercise.exercise_id,
-                weight: set.weight,
-                reps: set.reps,
-                volume: set.weight * set.reps,
-                session_id: id,
-              });
-            }
-          }
+      if (session && user) {
+        const prCount = await checkAndSubmitPRs(session, user.id, supabase);
+        if (prCount > 0) {
+          toast.success(`Parabéns! Você bateu ${prCount} novo(s) recorde(s)! 🏆`);
         }
       }
     },
@@ -244,9 +218,8 @@ export default function SessionPage() {
               {exercise.session_sets.map((set: SessionSet, index: number) => (
                 <div
                   key={set.id}
-                  className={`grid grid-cols-[40px_1fr_1fr_48px] gap-2 items-center ${
-                    set.is_completed ? "opacity-60" : ""
-                  }`}
+                  className={`grid grid-cols-[40px_1fr_1fr_48px] gap-2 items-center ${set.is_completed ? "opacity-60" : ""
+                    }`}
                 >
                   <span className="text-center text-sm font-medium">
                     {index + 1}
@@ -351,6 +324,11 @@ export default function SessionPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <RestTimer
+        isOpen={showRestTimer}
+        initialSeconds={restDuration}
+        onClose={() => setShowRestTimer(false)}
+      />
     </div>
   );
 }
