@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -272,67 +272,82 @@ export default function WorkoutsPage() {
       ) : (
         <div className="space-y-4">
           {workouts?.map((workout) => (
-            <Card key={workout.id} className="overflow-hidden">
+            <div
+              key={workout.id}
+              className="group relative overflow-hidden rounded-2xl border bg-card text-card-foreground shadow transition-all hover:shadow-md"
+            >
               <div
-                className="h-1"
+                className="absolute inset-x-0 top-0 h-1.5 opacity-80"
                 style={{ backgroundColor: workout.color || "#22c55e" }}
               />
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
+
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <CardTitle className="text-lg">{workout.name}</CardTitle>
+                    <h3 className="line-clamp-1 text-xl font-semibold tracking-tight text-foreground">
+                      {workout.name}
+                    </h3>
                     {workout.description && (
-                      <CardDescription className="mt-1">
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                         {workout.description}
-                      </CardDescription>
+                      </p>
                     )}
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {workout.exercise_count} exercício
-                    {workout.exercise_count !== 1 ? "s" : ""}
-                  </span>
+                  <div className="flex shrink-0 items-center justify-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Dumbbell className="mr-1 h-3.5 w-3.5" />
+                    {workout.exercise_count}
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
+
+                <div className="flex flex-col gap-3">
                   <Button
-                    size="sm"
-                    className="touch-target flex-1"
+                    size="lg"
+                    className="w-full touch-target glow-primary font-semibold shadow-sm"
                     onClick={() => startSession(workout)}
+                    style={{
+                      // Subtle tint based on workout color if present, else default primary
+                      ...(workout.color ? { borderColor: workout.color, backgroundColor: workout.color, color: 'white' } : {})
+                    }}
                   >
-                    <Play className="mr-2 h-4 w-4" />
-                    Iniciar
+                    <Play className="mr-2 h-5 w-5 fill-current" />
+                    INICIAR TREINO
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="touch-target"
-                    asChild
-                  >
-                    <Link to={`/workout/${workout.id}`}>
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="touch-target"
-                    onClick={() => duplicateMutation.mutate(workout)}
-                    disabled={duplicateMutation.isPending}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="touch-target text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setDeleteWorkoutId(workout.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      asChild
+                    >
+                      <Link to={`/workout/${workout.id}`}>
+                        <Pencil className="mr-2 h-3.5 w-3.5" />
+                        Editar
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      onClick={() => duplicateMutation.mutate(workout)}
+                      disabled={duplicateMutation.isPending}
+                    >
+                      <Copy className="mr-2 h-3.5 w-3.5" />
+                      Copiar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDeleteWorkoutId(workout.id)}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
+                      Excluir
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -360,6 +375,6 @@ export default function WorkoutsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 }

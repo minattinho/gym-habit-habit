@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RestTimer } from "@/components/RestTimer";
+import { NumberStepper } from "@/components/ui/number-stepper";
 
 import { checkAndSubmitPRs, SessionSet, SessionExercise } from "@/lib/pr";
 
@@ -206,65 +207,87 @@ export default function SessionPage() {
               <CardTitle className="text-base">{exercise.exercise_name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Header Row */}
-              <div className="grid grid-cols-[40px_1fr_1fr_48px] gap-2 text-xs font-medium text-muted-foreground">
-                <span className="text-center">Série</span>
-                <span className="text-center">Peso (kg)</span>
-                <span className="text-center">Reps</span>
-                <span className="text-center">✓</span>
-              </div>
+              {/* Improved Mobile Layout for Sets */}
+              <div className="space-y-4">
+                {exercise.session_sets.map((set: SessionSet, index: number) => {
+                  const isActive = !set.is_completed && !isCompleted;
+                  // Find if this is the *first* incomplete set to highlight it specifically if needed,
+                  // but for now, we just style based on completion status.
 
-              {/* Sets */}
-              {exercise.session_sets.map((set: SessionSet, index: number) => (
-                <div
-                  key={set.id}
-                  className={`grid grid-cols-[40px_1fr_1fr_48px] gap-2 items-center ${set.is_completed ? "opacity-60" : ""
-                    }`}
-                >
-                  <span className="text-center text-sm font-medium">
-                    {index + 1}
-                  </span>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={set.weight || ""}
-                    onChange={(e) =>
-                      updateSetMutation.mutate({
-                        setId: set.id,
-                        updates: { weight: parseFloat(e.target.value) || null },
-                      })
-                    }
-                    disabled={isCompleted}
-                    className="h-12 text-center text-lg font-semibold"
-                  />
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={set.reps || ""}
-                    onChange={(e) =>
-                      updateSetMutation.mutate({
-                        setId: set.id,
-                        updates: { reps: parseInt(e.target.value) || null },
-                      })
-                    }
-                    disabled={isCompleted}
-                    className="h-12 text-center text-lg font-semibold"
-                  />
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={set.is_completed}
-                      onCheckedChange={(checked) =>
-                        updateSetMutation.mutate({
-                          setId: set.id,
-                          updates: { is_completed: !!checked },
-                        })
-                      }
-                      disabled={isCompleted}
-                      className="h-7 w-7 rounded-full"
-                    />
-                  </div>
-                </div>
-              ))}
+                  return (
+                    <div
+                      key={set.id}
+                      className={`relative flex flex-col gap-3 rounded-xl border p-3 transition-colors ${set.is_completed
+                        ? "bg-muted/30 border-transparent opacity-60"
+                        : isActive
+                          ? "bg-card border-primary/20 shadow-sm"
+                          : "bg-card border-border"
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Série {index + 1}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={set.is_completed}
+                            onCheckedChange={(checked) =>
+                              updateSetMutation.mutate({
+                                setId: set.id,
+                                updates: { is_completed: !!checked },
+                              })
+                            }
+                            disabled={isCompleted}
+                            className="h-6 w-6 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            Kg
+                          </span>
+                          <NumberStepper
+                            value={set.weight}
+                            onChange={(val) =>
+                              updateSetMutation.mutate({
+                                setId: set.id,
+                                updates: { weight: val },
+                              })
+                            }
+                            step={2.5}
+                            disabled={isCompleted || set.is_completed}
+                            label="Weight"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            Reps
+                          </span>
+                          <NumberStepper
+                            value={set.reps}
+                            onChange={(val) =>
+                              updateSetMutation.mutate({
+                                setId: set.id,
+                                updates: { reps: val },
+                              })
+                            }
+                            step={1}
+                            disabled={isCompleted || set.is_completed}
+                            label="Reps"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Active Indicator Strip */}
+                      {!set.is_completed && !isCompleted && (
+                        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r bg-primary" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
               {/* Add Set Button */}
               {!isCompleted && (
