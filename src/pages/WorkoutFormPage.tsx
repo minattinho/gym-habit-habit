@@ -73,9 +73,9 @@ export default function WorkoutFormPage() {
       // Fetch sets for each exercise
       const exercisesWithSets = await Promise.all(
         workoutExercises.map(async (we) => {
-          const { data: sets, error: setsError } = await supabase
+          const { data: sets } = await supabase
             .from("workout_sets")
-            .select("*")
+            .select("reps, weight, order_index")
             .eq("workout_exercise_id", we.id)
             .order("order_index");
 
@@ -83,8 +83,8 @@ export default function WorkoutFormPage() {
             return {
               id: we.id,
               exercise_id: we.exercise_id,
-              exercise_name: (we.exercises as any)?.name || "Exercício",
-              sets: sets.map((s) => ({ reps: s.reps, weight: s.weight })),
+              exercise_name: (we.exercises as { name: string } | null)?.name || "Exercício",
+              sets: sets.map((s: { reps: number | null; weight: number | null }) => ({ reps: s.reps, weight: s.weight })),
               rest_seconds: we.rest_seconds,
               order_index: we.order_index,
             };
@@ -166,16 +166,16 @@ export default function WorkoutFormPage() {
         if (weError) throw weError;
 
         if (ex.sets.length > 0) {
+          const setsToInsert = ex.sets.map((s, i) => ({
+            workout_exercise_id: we.id,
+            reps: s.reps,
+            weight: s.weight,
+            order_index: i,
+          }));
+          
           const { error: setsError } = await supabase
             .from("workout_sets")
-            .insert(
-              ex.sets.map((s, i) => ({
-                workout_exercise_id: we.id,
-                reps: s.reps,
-                weight: s.weight,
-                order_index: i,
-              }))
-            );
+            .insert(setsToInsert);
 
           if (setsError) throw setsError;
         }

@@ -125,15 +125,15 @@ export default function WorkoutsPage() {
           // Copy sets
           const { data: existingSets } = await supabase
             .from("workout_sets")
-            .select("*")
+            .select("reps, weight, order_index")
             .eq("workout_exercise_id", ex.id);
 
           if (existingSets && existingSets.length > 0) {
-            const newSets = existingSets.map(s => ({
+            const newSets = existingSets.map((s: { reps: number | null; weight: number | null; order_index: number }) => ({
               workout_exercise_id: newExercise.id,
               reps: s.reps,
               weight: s.weight,
-              order_index: s.order_index
+              order_index: s.order_index,
             }));
 
             await supabase.from("workout_sets").insert(newSets);
@@ -194,13 +194,13 @@ export default function WorkoutsPage() {
         // Check for specific workout sets
         const { data: specificSets } = await supabase
           .from("workout_sets")
-          .select("*")
+          .select("reps, weight, order_index")
           .eq("workout_exercise_id", we.id)
           .order("order_index");
 
         let sets;
         if (specificSets && specificSets.length > 0) {
-          sets = specificSets.map((s, i) => ({
+          sets = specificSets.map((s: { reps: number | null; weight: number | null; order_index: number }, i: number) => ({
             session_exercise_id: sessionExercise.id,
             order_index: i,
             weight: s.weight,
