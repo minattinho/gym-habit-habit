@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -230,40 +231,40 @@ export default function WorkoutsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[80vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="container mx-auto max-w-2xl px-4 py-8 pb-32">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Meus Treinos</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Meus Treinos</h1>
+          <p className="text-muted-foreground mt-1">
             {workouts?.length || 0} treino{workouts?.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button asChild className="touch-target">
+        <Button asChild size="icon" className="h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all glow-primary">
           <Link to="/workout/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Treino
+            <Plus className="h-6 w-6" />
           </Link>
         </Button>
       </div>
 
       {workouts?.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Dumbbell className="mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="mb-2 text-lg font-medium">Nenhum treino ainda</h3>
-            <p className="mb-4 text-center text-sm text-muted-foreground">
+        <Card className="border-dashed bg-muted/30">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 rounded-full bg-background p-4 shadow-sm">
+              <Dumbbell className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="mb-2 text-xl font-semibold">Nenhum treino ainda</h3>
+            <p className="mb-6 max-w-xs text-sm text-secondary-foreground/80">
               Crie seu primeiro treino para começar a acompanhar seu progresso
             </p>
-            <Button asChild>
+            <Button asChild size="lg" className="rounded-full px-8">
               <Link to="/workout/new">
-                <Plus className="mr-2 h-4 w-4" />
                 Criar Treino
               </Link>
             </Button>
@@ -274,17 +275,17 @@ export default function WorkoutsPage() {
           {workouts?.map((workout) => (
             <div
               key={workout.id}
-              className="group relative overflow-hidden rounded-2xl border bg-card text-card-foreground shadow transition-all hover:shadow-md"
+              className="group relative overflow-hidden rounded-card border bg-card text-card-foreground shadow-soft transition-all hover:translate-y-[-2px] hover:shadow-lg"
             >
               <div
-                className="absolute inset-x-0 top-0 h-1.5 opacity-80"
-                style={{ backgroundColor: workout.color || "#22c55e" }}
+                className="absolute inset-x-0 top-0 h-1.5 opacity-90"
+                style={{ backgroundColor: workout.color || "#10B981" }}
               />
 
-              <div className="p-5">
-                <div className="flex items-start justify-between mb-4">
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h3 className="line-clamp-1 text-xl font-semibold tracking-tight text-foreground">
+                    <h3 className="line-clamp-1 text-xl font-bold tracking-tight text-foreground">
                       {workout.name}
                     </h3>
                     {workout.description && (
@@ -293,20 +294,21 @@ export default function WorkoutsPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center justify-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                    <Dumbbell className="mr-1 h-3.5 w-3.5" />
+                  <Badge variant="secondary" className="bg-secondary/10 text-secondary hover:bg-secondary/20">
+                    <Dumbbell className="mr-1 h-3 w-3" />
                     {workout.exercise_count}
-                  </div>
+                  </Badge>
                 </div>
 
                 <div className="flex flex-col gap-3">
                   <Button
                     size="lg"
-                    className="w-full touch-target glow-primary font-semibold shadow-sm"
+                    className="w-full font-bold shadow-sm transition-transform active:scale-[0.98]"
                     onClick={() => startSession(workout)}
                     style={{
-                      // Subtle tint based on workout color if present, else default primary
-                      ...(workout.color ? { borderColor: workout.color, backgroundColor: workout.color, color: 'white' } : {})
+                      backgroundColor: workout.color || undefined,
+                      borderColor: workout.color || undefined,
+                      color: 'white'
                     }}
                   >
                     <Play className="mr-2 h-5 w-5 fill-current" />
@@ -317,7 +319,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-full border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      className="h-10 w-full hover:bg-muted"
                       asChild
                     >
                       <Link to={`/workout/${workout.id}`}>
@@ -328,7 +330,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-full border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      className="h-10 w-full hover:bg-muted"
                       onClick={() => duplicateMutation.mutate(workout)}
                       disabled={duplicateMutation.isPending}
                     >
@@ -338,7 +340,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-9 w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="h-10 w-full hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setDeleteWorkoutId(workout.id)}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -356,7 +358,7 @@ export default function WorkoutsPage() {
         open={!!deleteWorkoutId}
         onOpenChange={() => setDeleteWorkoutId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir treino?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -365,9 +367,9 @@ export default function WorkoutsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
               onClick={() => deleteWorkoutId && deleteMutation.mutate(deleteWorkoutId)}
             >
               Excluir

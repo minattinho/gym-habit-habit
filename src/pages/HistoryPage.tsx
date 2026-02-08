@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Dumbbell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Calendar, Clock, ChevronRight } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -43,74 +44,83 @@ export default function HistoryPage() {
       const remainingMins = mins % 60;
       return `${hours}h ${remainingMins}min`;
     }
-    return `${mins}min ${secs}s`;
+    return `${mins}min`;
   };
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[80vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Histórico</h1>
-        <p className="text-sm text-muted-foreground">
-          {sessions?.length || 0} sessão{sessions?.length !== 1 ? "ões" : ""} de treino
+    <div className="container mx-auto max-w-2xl px-4 py-8 pb-32">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Histórico</h1>
+        <p className="mt-1 text-muted-foreground">
+          {sessions?.length || 0} treino{sessions?.length !== 1 ? "s" : ""} realizado{sessions?.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {sessions?.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="mb-4 h-12 w-12 text-muted-foreground" />
-            <h3 className="mb-2 text-lg font-medium">Nenhum treino realizado</h3>
-            <p className="text-center text-sm text-muted-foreground">
-              Inicie um treino na aba "Treinos" para ver seu histórico aqui
+        <Card className="border-dashed bg-muted/30">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 rounded-full bg-background p-4 shadow-sm">
+              <Calendar className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="mb-2 text-xl font-semibold">Nenhum treino realizado</h3>
+            <p className="max-w-xs text-sm text-secondary-foreground/80">
+              Complete seu primeiro treino para começar a ver seu histórico aqui.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {sessions?.map((session) => (
-            <Link key={session.id} to={`/session/${session.id}/details`}>
-              <Card className="transition-colors hover:bg-accent/50">
-                <CardHeader className="pb-2">
+            <Link key={session.id} to={`/session/${session.id}/details`} className="block group">
+              <Card className="transition-all hover:bg-muted/30 hover:shadow-md hover:border-primary/20">
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">
-                      {session.workout_name || "Treino Livre"}
-                    </CardTitle>
-                    {!session.completed_at && (
-                      <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs font-medium text-warning">
+                    <div>
+                      <CardTitle className="text-lg font-bold">
+                        {session.workout_name || "Treino Livre"}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{formatDuration(session.duration_seconds)}</span>
+                        </div>
+                        <span>•</span>
+                        <span>
+                          {format(new Date(session.started_at), "dd 'de' MMM", {
+                            locale: ptBR,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    {session.completed_at ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">
+                        Concluído
+                      </Badge>
+                    ) : (
+                      <Badge variant="warning" className="animate-pulse">
                         Em andamento
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {format(new Date(session.started_at), "dd/MM/yyyy", {
-                          locale: ptBR,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{formatDuration(session.duration_seconds)}</span>
-                    </div>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-muted-foreground/80 bg-muted/50 px-2 py-1 rounded inline-block">
+                      {formatDistanceToNow(new Date(session.started_at), {
+                        addSuffix: true,
+                        locale: ptBR,
+                      })}
+                    </p>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(session.started_at), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })}
-                  </p>
                 </CardContent>
               </Card>
             </Link>

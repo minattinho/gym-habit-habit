@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Loader2, Trophy, Clock, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -91,8 +91,6 @@ export default function SessionPage() {
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [restDuration, setRestDuration] = useState(60);
 
-  // ... (existing code)
-
   const updateSetMutation = useMutation({
     mutationFn: async ({
       setId,
@@ -169,7 +167,7 @@ export default function SessionPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[80vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -178,56 +176,56 @@ export default function SessionPage() {
   const isCompleted = !!session?.completed_at;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur safe-top">
         <div className="container flex h-14 max-w-2xl items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="icon" className="-ml-2" onClick={() => navigate("/")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">
+              <h1 className="text-base font-bold line-clamp-1">
                 {session?.workout_name || "Treino"}
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-lg font-mono">
-            <Clock className="h-5 w-5 text-primary" />
+          <Badge variant="outline" className="font-mono text-sm px-2 py-0.5 border-primary/20 bg-primary/5 text-primary">
+            <Clock className="mr-1.5 h-3.5 w-3.5" />
             {formatTime(elapsedTime)}
-          </div>
+          </Badge>
         </div>
       </header>
 
       {/* Exercises */}
       <div className="container max-w-2xl space-y-6 px-4 py-6">
         {session?.exercises.map((exercise: SessionExercise) => (
-          <Card key={exercise.id}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{exercise.exercise_name}</CardTitle>
+          <Card key={exercise.id} className="border-border shadow-soft overflow-hidden">
+            <CardHeader className="pb-3 bg-muted/30 border-b border-border/50">
+              <CardTitle className="text-base font-bold">{exercise.exercise_name}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Improved Mobile Layout for Sets */}
-              <div className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
+              {/* Sets List */}
+              <div className="space-y-3">
                 {exercise.session_sets.map((set: SessionSet, index: number) => {
                   const isActive = !set.is_completed && !isCompleted;
-                  // Find if this is the *first* incomplete set to highlight it specifically if needed,
-                  // but for now, we just style based on completion status.
 
                   return (
                     <div
                       key={set.id}
-                      className={`relative flex flex-col gap-3 rounded-xl border p-3 transition-colors ${set.is_completed
-                        ? "bg-muted/30 border-transparent opacity-60"
-                        : isActive
-                          ? "bg-card border-primary/20 shadow-sm"
-                          : "bg-card border-border"
+                      className={`relative flex flex-col gap-3 rounded-xl border p-3 transition-all duration-200 ${set.is_completed
+                          ? "bg-muted/30 border-transparent opacity-70"
+                          : isActive
+                            ? "bg-card border-primary ring-1 ring-primary/20 shadow-sm scale-[1.01]"
+                            : "bg-card border-border"
                         }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
+                        <Badge variant={set.is_completed ? "secondary" : "default"} className={`
+                          ${set.is_completed ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"}
+                        `}>
                           Série {index + 1}
-                        </span>
+                        </Badge>
                         <div className="flex items-center gap-3">
                           <Checkbox
                             checked={set.is_completed}
@@ -238,15 +236,15 @@ export default function SessionPage() {
                               })
                             }
                             disabled={isCompleted}
-                            className="h-6 w-6 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                            className="h-6 w-6 rounded-full border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-transform active:scale-90"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Kg
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                            Carga (Kg)
                           </span>
                           <NumberStepper
                             value={set.weight}
@@ -256,14 +254,14 @@ export default function SessionPage() {
                                 updates: { weight: val },
                               })
                             }
-                            step={2.5}
+                            step={1}
                             disabled={isCompleted || set.is_completed}
                             label="Weight"
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Reps
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                            Repetições
                           </span>
                           <NumberStepper
                             value={set.reps}
@@ -279,11 +277,6 @@ export default function SessionPage() {
                           />
                         </div>
                       </div>
-
-                      {/* Active Indicator Strip */}
-                      {!set.is_completed && !isCompleted && (
-                        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r bg-primary" />
-                      )}
                     </div>
                   );
                 })}
@@ -294,7 +287,7 @@ export default function SessionPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="w-full border-dashed border-primary/20 text-primary hover:bg-primary/5 hover:text-primary mt-2"
                   onClick={() => addSetMutation.mutate(exercise.id)}
                   disabled={addSetMutation.isPending}
                 >
@@ -309,15 +302,15 @@ export default function SessionPage() {
 
       {/* Finish Button */}
       {!isCompleted && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-4 backdrop-blur safe-bottom">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-4 backdrop-blur safe-bottom shadow-lg z-50">
           <div className="container max-w-2xl">
             <Button
-              className="w-full touch-target glow-primary"
+              className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform"
               size="lg"
               onClick={() => setShowFinishDialog(true)}
             >
               <CheckCircle className="mr-2 h-5 w-5" />
-              Finalizar Treino
+              FINALIZAR TREINO
             </Button>
           </div>
         </div>
@@ -325,28 +318,32 @@ export default function SessionPage() {
 
       {/* Finish Dialog */}
       <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl max-w-xs mx-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Finalizar treino?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tempo total: {formatTime(elapsedTime)}
+            <AlertDialogTitle className="text-center">Finalizar treino?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Tempo total: <span className="font-bold text-foreground">{formatTime(elapsedTime)}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Continuar treinando</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
             <AlertDialogAction
+              className="w-full rounded-xl h-11 bg-primary text-primary-foreground font-bold"
               onClick={() => finishSessionMutation.mutate()}
               disabled={finishSessionMutation.isPending}
             >
               {finishSessionMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Finalizar"
+                "Sim, finalizar"
               )}
             </AlertDialogAction>
+            <AlertDialogCancel className="w-full rounded-xl h-11 border-transparent text-muted-foreground hover:bg-muted">
+              Continuar treinando
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       <RestTimer
         isOpen={showRestTimer}
         initialSeconds={restDuration}

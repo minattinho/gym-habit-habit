@@ -2,84 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GymOG Design System - Dark Theme with Neon Green accent */
+/* GymFriend Design System - Coach Friendly */
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
+    /* Brand Colors - Light Mode */
+    --background: 220 14% 96%; /* #F7F8FA */
+    --foreground: 220 39% 11%; /* #111827 - text primary */
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 2%;
-
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 64%;
-
-    --accent: 142 71% 45%;
-    --accent-foreground: 0 0% 2%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 142 71% 45%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 142 71% 45%;
-    --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 142 71% 45%;
-
-    /* Custom tokens */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 2%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 2%;
-  }
-
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 220 39% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
+    --popover-foreground: 220 39% 11%;
 
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 160 84% 39%; /* #10B981 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 239 84% 67%; /* #6366F1 */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%; /* #6B7280 */
 
-    --accent: 142 71% 45%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 142 71% 45%;
+    --border: 220 13% 91%; /* #E5E7EB */
+    --input: 220 13% 91%;
+    --ring: 160 84% 39%;
+
+    --radius: 1rem; /* 16px */
+
+    /* Custom tokens */
+    --success: 142 76% 36%; /* #16A34A */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* #F59E0B */
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%; /* #3B82F6 */
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar - keeping consistent for now, can be updated later */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  /* Dark Mode Overrides */
+  [data-theme="dark"] {
+    --background: 220 40% 10%; /* #0B1220 */
+    --foreground: 220 13% 91%; /* #E5E7EB - text dark */
+
+    --card: 220 39% 11%; /* #111827 */
+    --card-foreground: 220 13% 91%;
+
+    --popover: 220 39% 11%;
+    --popover-foreground: 220 13% 91%;
+
+    --primary: 160 84% 39%; /* Keep primary vibrant */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 239 84% 67%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%; /* #9CA3AF */
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 28% 17%; /* #1F2937 */
+    --input: 215 28% 17%;
+    --ring: 160 84% 39%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -89,51 +103,56 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   /* Prevent pull-to-refresh on mobile */
   html {
     overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* Custom scrollbar for dark theme */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted));
-    border-radius: 3px;
+    @apply bg-muted-foreground/20 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    @apply bg-muted-foreground/40;
   }
 }
 
 @layer utilities {
   /* Touch-friendly targets */
   .touch-target {
-    @apply min-h-[48px] min-w-[48px];
+    @apply min-h-[44px] min-w-[44px];
   }
 
-  /* Glow effect for primary actions */
-  .glow-primary {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  /* Soft shadows */
+  .shadow-soft {
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.08);
   }
-
+  
   /* Safe area padding for mobile */
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
   .safe-top {
     padding-top: env(safe-area-inset-top, 0);
+  }
+  
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
