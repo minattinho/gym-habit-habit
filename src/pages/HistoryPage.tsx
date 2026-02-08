@@ -71,7 +71,7 @@ export default function HistoryPage() {
               <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="mb-2 text-xl font-semibold">Nenhum treino realizado</h3>
-            <p className="max-w-xs text-sm text-secondary-foreground/80">
+            <p className="max-w-xs text-sm text-muted-foreground">
               Complete seu primeiro treino para começar a ver seu histórico aqui.
             </p>
           </CardContent>
