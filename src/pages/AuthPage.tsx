@@ -4,10 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Dumbbell } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import gymfriendLogo from "@/assets/gymfriend-logo.png";
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -80,12 +81,13 @@ export default function AuthPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary glow-primary">
-          <Dumbbell className="h-8 w-8 text-primary-foreground" />
-        </div>
-        <h1 className="text-3xl font-bold text-foreground">GymOG</h1>
-        <p className="text-muted-foreground">Gestor de Treinos</p>
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <img 
+          src={gymfriendLogo} 
+          alt="GymFriend Logo" 
+          className="h-24 w-auto object-contain"
+        />
+        <p className="text-muted-foreground">Seu Parceiro de Treinos</p>
       </div>
 
       <Card className="w-full max-w-md border-border bg-card">
