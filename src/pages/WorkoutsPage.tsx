@@ -260,7 +260,7 @@ export default function WorkoutsPage() {
               <Dumbbell className="h-8 w-8 text-primary" />
             </div>
             <h3 className="mb-2 text-xl font-semibold">Nenhum treino ainda</h3>
-            <p className="mb-6 max-w-xs text-sm text-secondary-foreground/80">
+            <p className="mb-6 max-w-xs text-sm text-muted-foreground">
               Crie seu primeiro treino para começar a acompanhar seu progresso
             </p>
             <Button asChild size="lg" className="rounded-full px-8">
