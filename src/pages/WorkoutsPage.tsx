@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import NextWorkoutCard from "@/components/workout/NextWorkoutCard";
 
 interface Workout {
   id: string;
@@ -252,6 +253,10 @@ export default function WorkoutsPage() {
           </Link>
         </Button>
       </div>
+
+      {workouts && workouts.length > 0 && (
+        <NextWorkoutCard workouts={workouts} onStartSession={startSession} />
+      )}
 
       {workouts?.length === 0 ? (
         <Card className="border-dashed bg-muted/30">
