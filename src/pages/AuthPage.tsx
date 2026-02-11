@@ -35,7 +35,7 @@ export default function AuthPage() {
           : error.message,
       });
     } else {
-      toast.success("Bem-vindo de volta!");
+      // Navigate silently without toast
       navigate(from, { replace: true });
     }
 
