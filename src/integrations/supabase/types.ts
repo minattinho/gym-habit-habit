@@ -378,6 +378,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          notes: string | null
           order_index: number
           reps: number | null
           weight: number | null
@@ -386,6 +387,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          notes?: string | null
           order_index: number
           reps?: number | null
           weight?: number | null
@@ -394,6 +396,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          notes?: string | null
           order_index?: number
           reps?: number | null
           weight?: number | null

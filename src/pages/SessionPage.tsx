@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -276,6 +277,41 @@ export default function SessionPage() {
                             label="Reps"
                           />
                         </div>
+                      </div>
+
+                      {/* Notes */}
+                      <div className="mt-2">
+                        {set.notes !== null && set.notes !== undefined ? (
+                          <Input
+                            value={set.notes || ""}
+                            onChange={(e) =>
+                              updateSetMutation.mutate({
+                                setId: set.id,
+                                updates: { notes: e.target.value || null },
+                              })
+                            }
+                            className="h-7 text-xs"
+                            placeholder="Observação desta série..."
+                            disabled={isCompleted}
+                          />
+                        ) : (
+                          !isCompleted && !set.is_completed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-muted-foreground px-2"
+                              onClick={() =>
+                                updateSetMutation.mutate({
+                                  setId: set.id,
+                                  updates: { notes: "" },
+                                })
+                              }
+                            >
+                              <MessageSquare className="mr-1 h-3 w-3" />
+                              Adicionar observação
+                            </Button>
+                          )
+                        )}
                       </div>
                     </div>
                   );

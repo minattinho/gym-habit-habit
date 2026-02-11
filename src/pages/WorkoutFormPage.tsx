@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
 
 interface WorkoutSet {
   reps: number | null;
   weight: number | null;
+  notes: string | null;
 }
 
 interface WorkoutExercise {
@@ -84,7 +85,7 @@ export default function WorkoutFormPage() {
               id: we.id,
               exercise_id: we.exercise_id,
               exercise_name: (we.exercises as { name: string } | null)?.name || "Exercício",
-              sets: sets.map((s: { reps: number | null; weight: number | null }) => ({ reps: s.reps, weight: s.weight })),
+              sets: sets.map((s: { reps: number | null; weight: number | null; notes?: string | null }) => ({ reps: s.reps, weight: s.weight, notes: s.notes || null })),
               rest_seconds: we.rest_seconds,
               order_index: we.order_index,
             };
@@ -97,6 +98,7 @@ export default function WorkoutFormPage() {
               sets: Array.from({ length: we.sets_count }).map(() => ({
                 reps: we.target_reps,
                 weight: we.target_weight,
+                notes: null,
               })),
               rest_seconds: we.rest_seconds,
               order_index: we.order_index,
@@ -170,6 +172,7 @@ export default function WorkoutFormPage() {
             workout_exercise_id: we.id,
             reps: s.reps,
             weight: s.weight,
+            notes: s.notes,
             order_index: i,
           }));
           
@@ -199,9 +202,9 @@ export default function WorkoutFormPage() {
         exercise_id: exerciseId,
         exercise_name: exerciseName,
         sets: [
-          { reps: 12, weight: null },
-          { reps: 12, weight: null },
-          { reps: 12, weight: null },
+          { reps: 12, weight: null, notes: null },
+          { reps: 12, weight: null, notes: null },
+          { reps: 12, weight: null, notes: null },
         ],
         rest_seconds: 90,
         order_index: exercises.length,
@@ -210,9 +213,9 @@ export default function WorkoutFormPage() {
     setShowExerciseSelector(false);
   };
 
-  const updateSet = (exerciseIndex: number, setIndex: number, field: keyof WorkoutSet, value: number | null) => {
+  const updateSet = (exerciseIndex: number, setIndex: number, field: keyof WorkoutSet, value: number | string | null) => {
     const newExercises = [...exercises];
-    newExercises[exerciseIndex].sets[setIndex][field] = value;
+    (newExercises[exerciseIndex].sets[setIndex] as any)[field] = value;
     setExercises(newExercises);
   };
 
@@ -221,7 +224,8 @@ export default function WorkoutFormPage() {
     const previousSet = newExercises[exerciseIndex].sets[newExercises[exerciseIndex].sets.length - 1];
     newExercises[exerciseIndex].sets.push({
       reps: previousSet ? previousSet.reps : 12,
-      weight: previousSet ? previousSet.weight : null
+      weight: previousSet ? previousSet.weight : null,
+      notes: null,
     });
     setExercises(newExercises);
   };
@@ -358,35 +362,61 @@ export default function WorkoutFormPage() {
                       </div>
 
                       <div className="p-3 space-y-2">
-                        <div className="grid grid-cols-[32px_1fr_32px] gap-2 mb-1 px-1">
+                        <div className="grid grid-cols-[32px_1fr_32px_32px] gap-2 mb-1 px-1">
                           <span className="text-xs text-center text-muted-foreground font-medium">#</span>
                           <span className="text-xs text-center text-muted-foreground font-medium">Reps</span>
+                          <span></span>
                           <span></span>
                         </div>
 
                         {exercise.sets.map((set, setIndex) => (
-                          <div key={setIndex} className="grid grid-cols-[32px_1fr_32px] gap-2 items-center">
-                            <span className="text-sm text-center font-medium bg-muted/50 rounded h-8 flex items-center justify-center">
-                              {setIndex + 1}
-                            </span>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              value={set.reps || ""}
-                              onChange={(e) => updateSet(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || null)}
-                              className="h-8 text-center"
-                              placeholder="0"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => removeSet(exerciseIndex, setIndex)}
-                              disabled={exercise.sets.length <= 1}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                          <div key={setIndex} className="space-y-1">
+                            <div className="grid grid-cols-[32px_1fr_32px_32px] gap-2 items-center">
+                              <span className="text-sm text-center font-medium bg-muted/50 rounded h-8 flex items-center justify-center">
+                                {setIndex + 1}
+                              </span>
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                value={set.reps || ""}
+                                onChange={(e) => updateSet(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || null)}
+                                className="h-8 text-center"
+                                placeholder="0"
+                              />
+                              <Button
+                                type="button"
+                                variant={set.notes ? "secondary" : "ghost"}
+                                size="icon"
+                                className={`h-8 w-8 ${set.notes ? "text-primary" : "text-muted-foreground"}`}
+                                onClick={() => {
+                                  const current = set.notes || "";
+                                  const newNotes = current ? null : " ";
+                                  updateSet(exerciseIndex, setIndex, "notes", newNotes);
+                                }}
+                                title="Observação"
+                              >
+                                <MessageSquare className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeSet(exerciseIndex, setIndex)}
+                                disabled={exercise.sets.length <= 1}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            {set.notes !== null && (
+                              <Input
+                                value={set.notes || ""}
+                                onChange={(e) => updateSet(exerciseIndex, setIndex, "notes", e.target.value || null)}
+                                className="h-7 text-xs ml-[40px]"
+                                placeholder="Observação desta série..."
+                                autoFocus
+                              />
+                            )}
                           </div>
                         ))}
                         <Button
