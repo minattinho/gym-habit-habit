@@ -358,15 +358,14 @@ export default function WorkoutFormPage() {
                       </div>
 
                       <div className="p-3 space-y-2">
-                        <div className="grid grid-cols-[32px_1fr_1fr_32px] gap-2 mb-1 px-1">
+                        <div className="grid grid-cols-[32px_1fr_32px] gap-2 mb-1 px-1">
                           <span className="text-xs text-center text-muted-foreground font-medium">#</span>
                           <span className="text-xs text-center text-muted-foreground font-medium">Reps</span>
-                          <span className="text-xs text-center text-muted-foreground font-medium">Carga (kg)</span>
                           <span></span>
                         </div>
 
                         {exercise.sets.map((set, setIndex) => (
-                          <div key={setIndex} className="grid grid-cols-[32px_1fr_1fr_32px] gap-2 items-center">
+                          <div key={setIndex} className="grid grid-cols-[32px_1fr_32px] gap-2 items-center">
                             <span className="text-sm text-center font-medium bg-muted/50 rounded h-8 flex items-center justify-center">
                               {setIndex + 1}
                             </span>
@@ -377,14 +376,6 @@ export default function WorkoutFormPage() {
                               onChange={(e) => updateSet(exerciseIndex, setIndex, "reps", parseInt(e.target.value) || null)}
                               className="h-8 text-center"
                               placeholder="0"
-                            />
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              value={set.weight || ""}
-                              onChange={(e) => updateSet(exerciseIndex, setIndex, "weight", parseFloat(e.target.value) || null)}
-                              className="h-8 text-center"
-                              placeholder="—"
                             />
                             <Button
                               type="button"
@@ -398,7 +389,6 @@ export default function WorkoutFormPage() {
                             </Button>
                           </div>
                         ))}
-
                         <Button
                           type="button"
                           variant="outline"
