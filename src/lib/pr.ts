@@ -6,6 +6,7 @@ export interface SessionSet {
     weight: number | null;
     reps: number | null;
     is_completed: boolean;
+    notes?: string | null;
 }
 
 export interface SessionExercise {
