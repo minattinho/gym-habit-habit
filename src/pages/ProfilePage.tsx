@@ -273,13 +273,15 @@ export default function ProfilePage() {
         </div>
 
         {/* Install PWA */}
-        {deferredPrompt && !isInstalled && (
+        {!isInstalled && (
           <Button
             className="w-full touch-target"
-            onClick={handleInstall}
+            onClick={deferredPrompt ? handleInstall : undefined}
+            disabled={!deferredPrompt}
+            title={!deferredPrompt ? "Acesse pela URL publicada para instalar" : undefined}
           >
             <Download className="mr-2 h-4 w-4" />
-            Instalar App
+            {deferredPrompt ? "Instalar App" : "Instalar App (publique e acesse pelo navegador)"}
           </Button>
         )}
 
