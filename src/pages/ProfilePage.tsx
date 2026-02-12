@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, LogOut, Camera, User, Dumbbell, Calendar } from "lucide-react";
+import { Loader2, LogOut, Camera, User, Dumbbell, Calendar, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface Profile {
@@ -23,6 +23,34 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // Check if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setIsInstalled(true);
+      toast.success("App instalado com sucesso!");
+    }
+    setDeferredPrompt(null);
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -243,6 +271,17 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Install PWA */}
+        {deferredPrompt && !isInstalled && (
+          <Button
+            className="w-full touch-target"
+            onClick={handleInstall}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Instalar App
+          </Button>
+        )}
 
         {/* Logout */}
         <Button
