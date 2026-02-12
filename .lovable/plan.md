@@ -1,35 +1,54 @@
 
 
-## Próximo Treino - Início Rápido
+## PWA Completo para GymFriend
 
-### Funcionalidade
-Ao abrir o app, exibir um card destacado no topo da página de treinos mostrando o **próximo treino a ser feito**, com botão de início rápido. A lógica determina qual treino vem a seguir baseado no último treino completado.
+### O que falta hoje
+O app tem apenas um `manifest.json` básico e meta tags no HTML, mas **não possui service worker** -- o que significa que não funciona offline, não é instalável de verdade e não passa nos critérios de PWA do Google Lighthouse.
 
-### Lógica de Rotação
-1. Buscar a **última sessão completada** do usuário (`training_sessions` ordenado por `completed_at DESC`)
-2. Buscar **todos os treinos** do usuário ordenados por `created_at`
-3. Encontrar o índice do treino da última sessão na lista
-4. O próximo treino é o **seguinte na lista** (com rotação circular - após o último, volta ao primeiro)
-5. Se não houver sessões anteriores, sugere o primeiro treino da lista
+### O que será feito
 
-### UI - Card "Próximo Treino"
-- Card destacado no topo da página, antes da lista de treinos
-- Visual diferenciado: borda colorida, ícone de relâmpago/foguete
-- Mostra o nome do treino, quantidade de exercícios, e cor
-- Texto contextual: "Seu último treino foi **Treino B**. Hoje é dia de:"
-- Botão grande "INICIAR AGORA" com a cor do treino
-- Se não houver treinos cadastrados, não exibe o card
+**1. Instalar `vite-plugin-pwa`**
+- Adicionar o plugin que gera automaticamente o service worker (via Workbox) e gerencia cache, atualização e manifest.
+
+**2. Configurar `vite.config.ts`**
+- Registrar o plugin `VitePWA` com:
+  - Estratégia `generateSW` (auto-gera service worker)
+  - Manifest completo (nome, cores, ícones em múltiplos tamanhos)
+  - Cache de assets estáticos (JS, CSS, imagens, fontes)
+  - Runtime caching para chamadas à API do Supabase (network-first)
+  - `navigateFallbackDenylist: [/^\/~oauth/]` para não interferir com autenticação
+
+**3. Gerar ícones PWA**
+- Criar ícones SVG em `public/` nos tamanhos padrão: 192x192 e 512x512
+- Adicionar `maskable` icon para Android
+
+**4. Registrar o service worker no app**
+- Usar `registerSW` do `vite-plugin-pwa/virtual` no `main.tsx`
+- Adicionar prompt de atualização para quando houver nova versão
+
+**5. Remover `manifest.json` manual**
+- O plugin gera o manifest automaticamente, então o arquivo `public/manifest.json` será removido
+- A tag `<link rel="manifest">` no `index.html` também será removida (o plugin injeta automaticamente)
+
+**6. Página/prompt de instalação**
+- Capturar o evento `beforeinstallprompt` para oferecer um botão de "Instalar App" na página de perfil
 
 ---
 
 ### Detalhes Técnicos
 
-**Arquivo modificado:** `src/pages/WorkoutsPage.tsx`
+**Dependência:** `vite-plugin-pwa`
 
-1. Adicionar query para buscar a última sessão completada:
-   - `SELECT workout_id FROM training_sessions WHERE completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 1`
+**Arquivos modificados:**
+- `vite.config.ts` -- configuração do plugin VitePWA
+- `src/main.tsx` -- registro do service worker
+- `index.html` -- remover link manual do manifest (plugin injeta)
+- `src/pages/ProfilePage.tsx` -- botão "Instalar App"
 
-2. Calcular o próximo treino com lógica de rotação circular sobre a lista de workouts
+**Arquivos criados:**
+- `public/pwa-192x192.svg` -- ícone 192px
+- `public/pwa-512x512.svg` -- ícone 512px
 
-3. Renderizar um card hero no topo com o próximo treino sugerido e botão de início rápido (reutilizando a função `startSession` já existente)
+**Arquivos removidos:**
+- `public/manifest.json` -- substituído pelo manifest gerado pelo plugin
 
