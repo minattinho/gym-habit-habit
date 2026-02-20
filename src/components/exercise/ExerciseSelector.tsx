@@ -14,12 +14,13 @@ interface Exercise {
   name: string;
   muscle_group: string;
   is_global: boolean;
+  image_url: string | null;
 }
 
 interface ExerciseSelectorProps {
   open: boolean;
   onClose: () => void;
-  onSelect: (exerciseId: string, exerciseName: string) => void;
+  onSelect: (exerciseId: string, exerciseName: string, imageUrl: string | null) => void;
 }
 
 const MUSCLE_GROUPS = [
@@ -57,7 +58,7 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exercises")
-        .select("id, name, muscle_group, is_global")
+        .select("id, name, muscle_group, is_global, image_url")
         .or(`is_global.eq.true,user_id.eq.${user?.id}`)
         .order("name");
 
@@ -77,7 +78,7 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
   });
 
   const handleSelect = (exercise: Exercise) => {
-    onSelect(exercise.id, exercise.name);
+    onSelect(exercise.id, exercise.name, exercise.image_url);
   };
 
   return (
@@ -138,11 +139,24 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
                     className="w-full justify-start h-auto py-3"
                     onClick={() => handleSelect(exercise)}
                   >
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{exercise.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {MUSCLE_GROUP_LABELS[exercise.muscle_group] || exercise.muscle_group}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
+                        {exercise.image_url ? (
+                          <img
+                            src={exercise.image_url}
+                            alt={exercise.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Dumbbell className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{exercise.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {MUSCLE_GROUP_LABELS[exercise.muscle_group] || exercise.muscle_group}
+                        </span>
+                      </div>
                     </div>
                   </Button>
                 ))}

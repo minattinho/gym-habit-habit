@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X, MessageSquare, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
 
@@ -22,6 +22,7 @@ interface WorkoutExercise {
   id?: string;
   exercise_id: string;
   exercise_name: string;
+  image_url?: string | null;
   sets: WorkoutSet[];
   rest_seconds: number | null;
   order_index: number;
@@ -65,7 +66,7 @@ export default function WorkoutFormPage() {
 
       const { data: workoutExercises, error: exercisesError } = await supabase
         .from("workout_exercises")
-        .select("*, exercises(name)")
+        .select("*, exercises(name, image_url)")
         .eq("workout_id", id)
         .order("order_index");
 
@@ -84,7 +85,8 @@ export default function WorkoutFormPage() {
             return {
               id: we.id,
               exercise_id: we.exercise_id,
-              exercise_name: (we.exercises as { name: string } | null)?.name || "Exercício",
+              exercise_name: (we.exercises as { name: string; image_url: string | null } | null)?.name || "Exercício",
+              image_url: (we.exercises as { name: string; image_url: string | null } | null)?.image_url || null,
               sets: sets.map((s: { reps: number | null; weight: number | null; notes?: string | null }) => ({ reps: s.reps, weight: s.weight, notes: s.notes || null })),
               rest_seconds: we.rest_seconds,
               order_index: we.order_index,
@@ -95,6 +97,7 @@ export default function WorkoutFormPage() {
               id: we.id,
               exercise_id: we.exercise_id,
               exercise_name: (we.exercises as any)?.name || "Exercício",
+              image_url: (we.exercises as any)?.image_url || null,
               sets: Array.from({ length: we.sets_count }).map(() => ({
                 reps: we.target_reps,
                 weight: we.target_weight,
@@ -195,12 +198,13 @@ export default function WorkoutFormPage() {
     },
   });
 
-  const addExercise = (exerciseId: string, exerciseName: string) => {
+  const addExercise = (exerciseId: string, exerciseName: string, imageUrl: string | null) => {
     setExercises([
       ...exercises,
       {
         exercise_id: exerciseId,
         exercise_name: exerciseName,
+        image_url: imageUrl,
         sets: [
           { reps: 12, weight: null, notes: null },
           { reps: 12, weight: null, notes: null },
@@ -348,6 +352,13 @@ export default function WorkoutFormPage() {
                       <div className="flex items-center justify-between bg-muted/30 p-3 border-b border-border">
                         <div className="flex items-center gap-2">
                           <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
+                            {exercise.image_url ? (
+                              <img src={exercise.image_url} alt={exercise.exercise_name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
                           <span className="font-medium">{exercise.exercise_name}</span>
                         </div>
                         <Button
