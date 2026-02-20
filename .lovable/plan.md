@@ -1,54 +1,34 @@
 
 
-## PWA Completo para GymFriend
+## Adicionar Fotos aos Exercícios
 
-### O que falta hoje
-O app tem apenas um `manifest.json` básico e meta tags no HTML, mas **não possui service worker** -- o que significa que não funciona offline, não é instalável de verdade e não passa nos critérios de PWA do Google Lighthouse.
+O banco de dados já possui o campo `image_url` na tabela `exercises` e um bucket de storage `exercise-media` configurado. A implementação consiste em exibir essas imagens nos locais onde exercícios aparecem.
 
-### O que será feito
+### Alterações
 
-**1. Instalar `vite-plugin-pwa`**
-- Adicionar o plugin que gera automaticamente o service worker (via Workbox) e gerencia cache, atualização e manifest.
+**1. ExerciseSelector.tsx** -- Exibir thumbnail ao lado de cada exercício na lista de seleção
+- Incluir `image_url` na query do Supabase
+- Mostrar a imagem (ou ícone fallback `Dumbbell`) à esquerda do nome do exercício
+- Layout: avatar circular de 40px + nome + grupo muscular
 
-**2. Configurar `vite.config.ts`**
-- Registrar o plugin `VitePWA` com:
-  - Estratégia `generateSW` (auto-gera service worker)
-  - Manifest completo (nome, cores, ícones em múltiplos tamanhos)
-  - Cache de assets estáticos (JS, CSS, imagens, fontes)
-  - Runtime caching para chamadas à API do Supabase (network-first)
-  - `navigateFallbackDenylist: [/^\/~oauth/]` para não interferir com autenticação
+**2. WorkoutFormPage.tsx** -- Mostrar a imagem do exercício no cabeçalho de cada exercício adicionado ao treino
+- Buscar `image_url` junto com o nome ao carregar exercícios existentes
+- Passar `image_url` na interface `WorkoutExercise` (campo opcional)
+- Exibir thumbnail pequeno (32px) ao lado do nome no header do exercício
 
-**3. Gerar ícones PWA**
-- Criar ícones SVG em `public/` nos tamanhos padrão: 192x192 e 512x512
-- Adicionar `maskable` icon para Android
+**3. SessionPage.tsx** -- Mostrar a imagem do exercício durante a sessão de treino
+- Incluir `image_url` na query que busca os exercícios da sessão (via join com `exercises`)
+- Exibir thumbnail ao lado do nome de cada exercício
 
-**4. Registrar o service worker no app**
-- Usar `registerSW` do `vite-plugin-pwa/virtual` no `main.tsx`
-- Adicionar prompt de atualização para quando houver nova versão
-
-**5. Remover `manifest.json` manual**
-- O plugin gera o manifest automaticamente, então o arquivo `public/manifest.json` será removido
-- A tag `<link rel="manifest">` no `index.html` também será removida (o plugin injeta automaticamente)
-
-**6. Página/prompt de instalação**
-- Capturar o evento `beforeinstallprompt` para oferecer um botão de "Instalar App" na página de perfil
-
----
+**4. ExerciseSelector - callback atualizado**
+- Passar `image_url` no callback `onSelect` para que a página de criação de treino já tenha a URL da imagem sem precisar de query adicional
 
 ### Detalhes Técnicos
 
-**Dependência:** `vite-plugin-pwa`
-
-**Arquivos modificados:**
-- `vite.config.ts` -- configuração do plugin VitePWA
-- `src/main.tsx` -- registro do service worker
-- `index.html` -- remover link manual do manifest (plugin injeta)
-- `src/pages/ProfilePage.tsx` -- botão "Instalar App"
-
-**Arquivos criados:**
-- `public/pwa-192x192.svg` -- ícone 192px
-- `public/pwa-512x512.svg` -- ícone 512px
-
-**Arquivos removidos:**
-- `public/manifest.json` -- substituído pelo manifest gerado pelo plugin
+- A interface `Exercise` no `ExerciseSelector` será expandida para incluir `image_url: string | null`
+- A interface `WorkoutExercise` no `WorkoutFormPage` receberá `image_url?: string | null`
+- O callback `onSelect` passará a receber um terceiro parâmetro: `imageUrl: string | null`
+- Componente de imagem usará fallback com ícone `Dumbbell` quando `image_url` for null
+- Imagens serão exibidas com `object-cover` e bordas arredondadas
+- Não será necessária nenhuma migração de banco de dados -- o campo e o bucket já existem
 
