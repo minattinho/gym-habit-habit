@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare, Dumbbell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
@@ -47,7 +47,7 @@ export default function SessionPage() {
 
       const { data: exercisesData, error: exercisesError } = await supabase
         .from("session_exercises")
-        .select("*, session_sets(*)")
+        .select("*, session_sets(*), exercises(image_url)")
         .eq("session_id", id)
         .order("order_index");
 
@@ -56,6 +56,7 @@ export default function SessionPage() {
       // Sort sets by order_index
       const exercises = exercisesData.map((ex) => ({
         ...ex,
+        image_url: (ex.exercises as any)?.image_url || null,
         session_sets: (ex.session_sets || []).sort(
           (a: SessionSet, b: SessionSet) => a.order_index - b.order_index
         ),
@@ -203,7 +204,16 @@ export default function SessionPage() {
         {session?.exercises.map((exercise: SessionExercise) => (
           <Card key={exercise.id} className="border-border shadow-soft overflow-hidden">
             <CardHeader className="pb-3 bg-muted/30 border-b border-border/50">
-              <CardTitle className="text-base font-bold">{exercise.exercise_name}</CardTitle>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
+                  {(exercise as any).image_url ? (
+                    <img src={(exercise as any).image_url} alt={exercise.exercise_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                {exercise.exercise_name}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               {/* Sets List */}
