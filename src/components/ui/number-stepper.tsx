@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Minus, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface NumberStepperProps {
     value: number | null;
@@ -11,7 +11,7 @@ interface NumberStepperProps {
     max?: number;
     disabled?: boolean;
     className?: string;
-    label?: string; // Optional label for accessibility/context
+    label?: string;
 }
 
 export function NumberStepper({
@@ -27,23 +27,49 @@ export function NumberStepper({
     const [internalValue, setInternalValue] = useState<string>(
         value?.toString() ?? ""
     );
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastEmittedRef = useRef<number | null>(value);
 
+    // Sync from parent only when the parent value differs from what we last emitted
     useEffect(() => {
-        setInternalValue(value?.toString() ?? "");
+        if (value !== lastEmittedRef.current) {
+            setInternalValue(value?.toString() ?? "");
+            lastEmittedRef.current = value;
+        }
     }, [value]);
+
+    const debouncedOnChange = useCallback(
+        (newValue: number) => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(() => {
+                lastEmittedRef.current = newValue;
+                onChange(newValue);
+            }, 500);
+        },
+        [onChange]
+    );
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, []);
 
     const handleIncrement = () => {
         if (disabled) return;
         const currentValue = parseFloat(internalValue) || 0;
         const newValue = Math.min(currentValue + step, max);
-        onChange(newValue);
+        setInternalValue(newValue.toString());
+        debouncedOnChange(newValue);
     };
 
     const handleDecrement = () => {
         if (disabled) return;
         const currentValue = parseFloat(internalValue) || 0;
         const newValue = Math.max(currentValue - step, min);
-        onChange(newValue);
+        setInternalValue(newValue.toString());
+        debouncedOnChange(newValue);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +77,7 @@ export function NumberStepper({
         setInternalValue(val);
         const num = parseFloat(val);
         if (!isNaN(num)) {
-            onChange(num);
+            debouncedOnChange(num);
         }
     };
 

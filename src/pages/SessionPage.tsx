@@ -108,10 +108,46 @@ export default function SessionPage() {
 
       if (error) throw error;
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["session", id] });
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["session", id] });
+
+      // Snapshot previous value
+      const previousSession = queryClient.getQueryData(["session", id]);
+
+      // Optimistically update cache
+      queryClient.setQueryData(["session", id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          exercises: old.exercises.map((ex: any) => ({
+            ...ex,
+            session_sets: ex.session_sets.map((set: any) =>
+              set.id === variables.setId
+                ? { ...set, ...variables.updates }
+                : set
+            ),
+          })),
+        };
+      });
+
+      // Show rest timer immediately for completed sets
       if (variables.updates.is_completed) {
         setShowRestTimer(true);
+      }
+
+      return { previousSession };
+    },
+    onError: (_err, _variables, context: any) => {
+      // Rollback on error
+      if (context?.previousSession) {
+        queryClient.setQueryData(["session", id], context.previousSession);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      // Only refetch for is_completed changes (structural change)
+      if (variables.updates.is_completed !== undefined) {
+        queryClient.invalidateQueries({ queryKey: ["session", id] });
       }
     },
   });
