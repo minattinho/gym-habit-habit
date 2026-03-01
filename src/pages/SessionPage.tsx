@@ -35,6 +35,7 @@ export default function SessionPage() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
+  const [removeExerciseId, setRemoveExerciseId] = useState<string | null>(null);
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["session", id],
@@ -366,7 +367,7 @@ export default function SessionPage() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                      onClick={() => removeExerciseMutation.mutate(exercise.id)}
+                      onClick={() => setRemoveExerciseId(exercise.id)}
                       disabled={removeExerciseMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -568,6 +569,32 @@ export default function SessionPage() {
             </AlertDialogAction>
             <AlertDialogCancel className="w-full rounded-xl h-11 border-transparent text-muted-foreground hover:bg-muted">
               Continuar treinando
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Exercise Confirmation */}
+      <AlertDialog open={!!removeExerciseId} onOpenChange={() => setRemoveExerciseId(null)}>
+        <AlertDialogContent className="rounded-2xl max-w-xs mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover exercício?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O exercício e todas as suas séries serão removidos desta sessão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
+            <AlertDialogAction
+              className="w-full rounded-xl h-11 bg-destructive text-destructive-foreground font-bold hover:bg-destructive/90"
+              onClick={() => {
+                if (removeExerciseId) removeExerciseMutation.mutate(removeExerciseId);
+                setRemoveExerciseId(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full rounded-xl h-11 border-transparent text-muted-foreground hover:bg-muted">
+              Cancelar
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
