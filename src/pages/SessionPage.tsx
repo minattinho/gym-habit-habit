@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare, Dumbbell } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare, Dumbbell, Trash2, ChevronUp, ChevronDown, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ export default function SessionPage() {
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [showExerciseSelector, setShowExerciseSelector] = useState(false);
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["session", id],
@@ -174,6 +176,95 @@ export default function SessionPage() {
     },
   });
 
+  // Remove a set from an exercise
+  const removeSetMutation = useMutation({
+    mutationFn: async ({ setId, sessionExerciseId }: { setId: string; sessionExerciseId: string }) => {
+      const { error } = await supabase.from("session_sets").delete().eq("id", setId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", id] });
+    },
+  });
+
+  // Add a new exercise to the session
+  const addExerciseMutation = useMutation({
+    mutationFn: async ({ exerciseId, exerciseName, imageUrl }: { exerciseId: string; exerciseName: string; imageUrl: string | null }) => {
+      const maxOrder = session?.exercises?.length || 0;
+      const { data: newExercise, error: exError } = await supabase
+        .from("session_exercises")
+        .insert({
+          session_id: id!,
+          exercise_id: exerciseId,
+          exercise_name: exerciseName,
+          order_index: maxOrder,
+        })
+        .select()
+        .single();
+
+      if (exError) throw exError;
+
+      // Create one default set
+      const { error: setError } = await supabase.from("session_sets").insert({
+        session_exercise_id: newExercise.id,
+        order_index: 0,
+        weight: null,
+        reps: 12,
+        is_completed: false,
+      });
+      if (setError) throw setError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", id] });
+      setShowExerciseSelector(false);
+      toast.success("Exercício adicionado!");
+    },
+  });
+
+  // Remove an exercise from the session
+  const removeExerciseMutation = useMutation({
+    mutationFn: async (sessionExerciseId: string) => {
+      // Delete sets first, then the exercise
+      const { error: setsError } = await supabase
+        .from("session_sets")
+        .delete()
+        .eq("session_exercise_id", sessionExerciseId);
+      if (setsError) throw setsError;
+
+      const { error } = await supabase
+        .from("session_exercises")
+        .delete()
+        .eq("id", sessionExerciseId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", id] });
+      toast.success("Exercício removido");
+    },
+  });
+
+  // Reorder exercise (swap with neighbor)
+  const reorderExerciseMutation = useMutation({
+    mutationFn: async ({ exerciseId, direction }: { exerciseId: string; direction: "up" | "down" }) => {
+      const exercises = session?.exercises || [];
+      const idx = exercises.findIndex((e: SessionExercise) => e.id === exerciseId);
+      if (idx < 0) return;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= exercises.length) return;
+
+      const current = exercises[idx];
+      const swap = exercises[swapIdx];
+
+      await Promise.all([
+        supabase.from("session_exercises").update({ order_index: swap.order_index }).eq("id", current.id),
+        supabase.from("session_exercises").update({ order_index: current.order_index }).eq("id", swap.id),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session", id] });
+    },
+  });
+
   const finishSessionMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -237,19 +328,52 @@ export default function SessionPage() {
 
       {/* Exercises */}
       <div className="container max-w-2xl space-y-6 px-4 py-6">
-        {session?.exercises.map((exercise: SessionExercise) => (
+        {session?.exercises.map((exercise: SessionExercise, exIndex: number) => (
           <Card key={exercise.id} className="border-border shadow-soft overflow-hidden">
             <CardHeader className="pb-3 bg-muted/30 border-b border-border/50">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
-                  {(exercise as any).image_url ? (
-                    <img src={(exercise as any).image_url} alt={exercise.exercise_name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Dumbbell className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                {exercise.exercise_name}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
+                    {(exercise as any).image_url ? (
+                      <img src={(exercise as any).image_url} alt={exercise.exercise_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <span className="line-clamp-1">{exercise.exercise_name}</span>
+                </CardTitle>
+                {!isCompleted && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => reorderExerciseMutation.mutate({ exerciseId: exercise.id, direction: "up" })}
+                      disabled={exIndex === 0 || reorderExerciseMutation.isPending}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => reorderExerciseMutation.mutate({ exerciseId: exercise.id, direction: "down" })}
+                      disabled={exIndex === (session?.exercises?.length || 0) - 1 || reorderExerciseMutation.isPending}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                      onClick={() => removeExerciseMutation.mutate(exercise.id)}
+                      disabled={removeExerciseMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               {/* Sets List */}
@@ -273,7 +397,18 @@ export default function SessionPage() {
                         `}>
                           Série {index + 1}
                         </Badge>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {!isCompleted && !set.is_completed && exercise.session_sets.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => removeSetMutation.mutate({ setId: set.id, sessionExerciseId: exercise.id })}
+                              disabled={removeSetMutation.isPending}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Checkbox
                             checked={set.is_completed}
                             onCheckedChange={(checked) =>
@@ -380,6 +515,18 @@ export default function SessionPage() {
             </CardContent>
           </Card>
         ))}
+
+        {/* Add Exercise Button */}
+        {!isCompleted && (
+          <Button
+            variant="outline"
+            className="w-full border-dashed border-primary/30 text-primary hover:bg-primary/5 h-12"
+            onClick={() => setShowExerciseSelector(true)}
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Adicionar Exercício
+          </Button>
+        )}
       </div>
 
       {/* Finish Button */}
@@ -430,6 +577,14 @@ export default function SessionPage() {
         isOpen={showRestTimer}
         initialSeconds={restDuration}
         onClose={() => setShowRestTimer(false)}
+      />
+
+      <ExerciseSelector
+        open={showExerciseSelector}
+        onClose={() => setShowExerciseSelector(false)}
+        onSelect={(exerciseId, exerciseName, imageUrl) =>
+          addExerciseMutation.mutate({ exerciseId, exerciseName, imageUrl })
+        }
       />
     </div>
   );
