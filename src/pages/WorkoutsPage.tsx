@@ -155,74 +155,105 @@ export default function WorkoutsPage() {
 
   const startSession = async (workout: Workout) => {
     try {
-      // Create training session
-      const { data: session, error: sessionError } = await supabase
-        .from("training_sessions")
-        .insert({
-          user_id: user!.id,
-          workout_id: workout.id,
-          workout_name: workout.name,
-        })
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Get workout exercises
-      const { data: workoutExercises, error: exercisesError } = await supabase
-        .from("workout_exercises")
-        .select("*, exercises(name)")
-        .eq("workout_id", workout.id)
-        .order("order_index");
-
-      if (exercisesError) throw exercisesError;
-
-      // Create session exercises and sets
-      for (const we of workoutExercises || []) {
-        const { data: sessionExercise, error: seError } = await supabase
-          .from("session_exercises")
+      // 1. Create session + fetch exercises in parallel
+      const [sessionResult, exercisesResult] = await Promise.all([
+        supabase
+          .from("training_sessions")
           .insert({
-            session_id: session.id,
-            exercise_id: we.exercise_id,
-            exercise_name: (we.exercises as any)?.name || "Exercício",
-            order_index: we.order_index,
+            user_id: user!.id,
+            workout_id: workout.id,
+            workout_name: workout.name,
           })
           .select()
-          .single();
+          .single(),
+        supabase
+          .from("workout_exercises")
+          .select("*, exercises(name)")
+          .eq("workout_id", workout.id)
+          .order("order_index"),
+      ]);
 
-        if (seError) throw seError;
+      if (sessionResult.error) throw sessionResult.error;
+      if (exercisesResult.error) throw exercisesResult.error;
 
-        // Check for specific workout sets
-        const { data: specificSets } = await supabase
-          .from("workout_sets")
-          .select("reps, weight, order_index")
-          .eq("workout_exercise_id", we.id)
-          .order("order_index");
+      const session = sessionResult.data;
+      const workoutExercises = exercisesResult.data || [];
 
-        let sets;
-        if (specificSets && specificSets.length > 0) {
-          sets = specificSets.map((s: { reps: number | null; weight: number | null; order_index: number }, i: number) => ({
-            session_exercise_id: sessionExercise.id,
-            order_index: i,
-            weight: s.weight,
-            reps: s.reps,
-            is_completed: false,
-          }));
-        } else {
-          // Create empty sets (Legacy fallback)
-          sets = Array.from({ length: we.sets_count }, (_, i) => ({
-            session_exercise_id: sessionExercise.id,
-            order_index: i,
-            weight: we.target_weight,
-            reps: we.target_reps,
-            is_completed: false,
-          }));
-        }
-
-        await supabase.from("session_sets").insert(sets);
+      if (workoutExercises.length === 0) {
+        navigate(`/session/${session.id}`);
+        return;
       }
 
-      // Navigate to session
+      // 2. Batch insert all session exercises at once
+      const sessionExerciseRows = workoutExercises.map((we) => ({
+        session_id: session.id,
+        exercise_id: we.exercise_id,
+        exercise_name: (we.exercises as any)?.name || "Exercício",
+        order_index: we.order_index,
+      }));
+
+      // Fetch all workout_sets for all exercises in one query
+      const weIds = workoutExercises.map((we) => we.id);
+      const [seResult, allSetsResult] = await Promise.all([
+        supabase.from("session_exercises").insert(sessionExerciseRows).select(),
+        supabase
+          .from("workout_sets")
+          .select("workout_exercise_id, reps, weight, order_index")
+          .in("workout_exercise_id", weIds)
+          .order("order_index"),
+      ]);
+
+      if (seResult.error) throw seResult.error;
+
+      const sessionExercises = seResult.data;
+      const allWorkoutSets = allSetsResult.data || [];
+
+      // 3. Build all session_sets in memory, then batch insert
+      const allSessionSets: Array<{
+        session_exercise_id: string;
+        order_index: number;
+        weight: number | null;
+        reps: number | null;
+        is_completed: boolean;
+      }> = [];
+
+      for (let i = 0; i < workoutExercises.length; i++) {
+        const we = workoutExercises[i];
+        const se = sessionExercises[i];
+        const specificSets = allWorkoutSets.filter(
+          (s) => s.workout_exercise_id === we.id
+        );
+
+        if (specificSets.length > 0) {
+          for (let j = 0; j < specificSets.length; j++) {
+            allSessionSets.push({
+              session_exercise_id: se.id,
+              order_index: j,
+              weight: specificSets[j].weight,
+              reps: specificSets[j].reps,
+              is_completed: false,
+            });
+          }
+        } else {
+          for (let j = 0; j < we.sets_count; j++) {
+            allSessionSets.push({
+              session_exercise_id: se.id,
+              order_index: j,
+              weight: we.target_weight,
+              reps: we.target_reps,
+              is_completed: false,
+            });
+          }
+        }
+      }
+
+      if (allSessionSets.length > 0) {
+        const { error: setsError } = await supabase
+          .from("session_sets")
+          .insert(allSessionSets);
+        if (setsError) throw setsError;
+      }
+
       navigate(`/session/${session.id}`);
     } catch (error) {
       console.error("Error starting session:", error);
