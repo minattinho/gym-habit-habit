@@ -79,7 +79,7 @@ export default function HistoryPage() {
       ) : (
         <div className="space-y-4">
           {sessions?.map((session) => (
-            <Link key={session.id} to={`/session/${session.id}/details`} className="block group">
+            <Link key={session.id} to={`/session/${session.id}`} className="block group">
               <Card className="transition-all hover:bg-muted/30 hover:shadow-md hover:border-primary/20">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
