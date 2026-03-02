@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell, Trophy } from "lucide-react";
+import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell, Trophy, Timer } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -35,6 +35,24 @@ export default function WorkoutsPage() {
   const queryClient = useQueryClient();
   const [deleteWorkoutId, setDeleteWorkoutId] = useState<string | null>(null);
 
+  // Check for active (incomplete) session
+  const { data: activeSession } = useQuery({
+    queryKey: ["active-session"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("training_sessions")
+        .select("id, workout_name, started_at")
+        .is("completed_at", null)
+        .eq("user_id", user!.id)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const { data: workouts, isLoading } = useQuery({
     queryKey: ["workouts"],
     queryFn: async () => {
@@ -45,7 +63,6 @@ export default function WorkoutsPage() {
 
       if (error) throw error;
 
-      // Get exercise counts for each workout
       const workoutsWithCounts = await Promise.all(
         (workoutsData || []).map(async (workout) => {
           const { count } = await supabase
@@ -284,6 +301,28 @@ export default function WorkoutsPage() {
           </Link>
         </Button>
       </div>
+
+      {activeSession && (
+        <Link
+          to={`/session/${activeSession.id}`}
+          className="mb-6 flex items-center gap-3 rounded-card border border-primary/30 bg-primary/10 p-4 shadow-sm transition-all hover:bg-primary/15 hover:shadow-md"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+            <Timer className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground truncate">
+              {activeSession.workout_name || "Treino"} em andamento
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Iniciado {new Date(activeSession.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+          <Button size="sm" className="shrink-0 rounded-full font-bold">
+            Retomar
+          </Button>
+        </Link>
+      )}
 
       {workouts && workouts.length > 0 && (
         <NextWorkoutCard workouts={workouts} onStartSession={startSession} />
