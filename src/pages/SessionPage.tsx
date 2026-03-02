@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare, Dumbbell, Trash2, ChevronUp, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Clock, CheckCircle, Save, MessageSquare, Dumbbell, Trash2, ChevronUp, ChevronDown, X, TrendingUp, TrendingDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
 import { toast } from "sonner";
@@ -70,6 +70,46 @@ export default function SessionPage() {
       return { ...sessionData, exercises };
     },
     enabled: !!id,
+  });
+
+  // Query previous session for same workout
+  const { data: previousSetsMap } = useQuery({
+    queryKey: ["previous-session", session?.workout_id, id],
+    queryFn: async () => {
+      if (!session?.workout_id) return null;
+
+      // Find last completed session for same workout
+      const { data: prevSession } = await supabase
+        .from("training_sessions")
+        .select("id")
+        .eq("workout_id", session.workout_id)
+        .not("completed_at", "is", null)
+        .neq("id", id!)
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!prevSession) return null;
+
+      // Get exercises and sets from that session
+      const { data: prevExercises } = await supabase
+        .from("session_exercises")
+        .select("exercise_id, session_sets(order_index, weight, reps)")
+        .eq("session_id", prevSession.id);
+
+      if (!prevExercises) return null;
+
+      // Build map: exercise_id -> sets sorted by order_index
+      const map: Record<string, { weight: number | null; reps: number | null }[]> = {};
+      for (const ex of prevExercises) {
+        const sets = (ex.session_sets || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((s: any) => ({ weight: s.weight, reps: s.reps }));
+        map[ex.exercise_id] = sets;
+      }
+      return map;
+    },
+    enabled: !!session?.workout_id && !!id,
   });
 
   // Timer
@@ -423,6 +463,32 @@ export default function SessionPage() {
                           />
                         </div>
                       </div>
+
+                      {/* Previous session reference */}
+                      {(() => {
+                        const prevSets = previousSetsMap?.[exercise.exercise_id];
+                        const prev = prevSets?.[index];
+                        if (!prev || (prev.weight == null && prev.reps == null)) return null;
+
+                        const weightDiff = set.weight != null && prev.weight != null
+                          ? set.weight - prev.weight
+                          : null;
+                        const repsDiff = set.reps != null && prev.reps != null
+                          ? set.reps - prev.reps
+                          : null;
+                        const hasIncrease = (weightDiff != null && weightDiff > 0) || (repsDiff != null && repsDiff > 0);
+                        const hasDecrease = (weightDiff != null && weightDiff < 0) || (repsDiff != null && repsDiff < 0);
+
+                        return (
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span>
+                              Anterior: {prev.weight != null ? `${prev.weight}kg` : "—"} × {prev.reps != null ? prev.reps : "—"}
+                            </span>
+                            {hasIncrease && <TrendingUp className="h-3 w-3 text-green-500" />}
+                            {hasDecrease && !hasIncrease && <TrendingDown className="h-3 w-3 text-red-500" />}
+                          </div>
+                        );
+                      })()}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
