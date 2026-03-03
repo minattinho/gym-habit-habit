@@ -296,12 +296,40 @@ export default function SessionPage() {
       const current = exercises[idx];
       const swap = exercises[swapIdx];
 
+      // Use array indices as new order_index values to avoid duplicates
       await Promise.all([
-        supabase.from("session_exercises").update({ order_index: swap.order_index }).eq("id", current.id),
-        supabase.from("session_exercises").update({ order_index: current.order_index }).eq("id", swap.id),
+        supabase.from("session_exercises").update({ order_index: swapIdx }).eq("id", current.id),
+        supabase.from("session_exercises").update({ order_index: idx }).eq("id", swap.id),
       ]);
     },
-    onSuccess: () => {
+    onMutate: async ({ exerciseId, direction }) => {
+      await queryClient.cancelQueries({ queryKey: ["session", id] });
+      const previous = queryClient.getQueryData(["session", id]);
+
+      queryClient.setQueryData(["session", id], (old: any) => {
+        if (!old) return old;
+        const exercises = [...old.exercises];
+        const idx = exercises.findIndex((e: any) => e.id === exerciseId);
+        if (idx < 0) return old;
+        const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= exercises.length) return old;
+
+        // Swap in array and update order_index
+        [exercises[idx], exercises[swapIdx]] = [exercises[swapIdx], exercises[idx]];
+        exercises[idx].order_index = idx;
+        exercises[swapIdx].order_index = swapIdx;
+
+        return { ...old, exercises };
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["session", id], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["session", id] });
     },
   });
