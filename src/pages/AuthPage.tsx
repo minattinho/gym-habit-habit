@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,12 +29,12 @@ export default function AuthPage() {
 
     if (error) {
       toast.error("Erro ao entrar", {
-        description: error.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos" 
-          : error.message,
+        description:
+          error.message === "Invalid login credentials"
+            ? "Email ou senha incorretos"
+            : error.message,
       });
     } else {
-      // Navigate silently without toast
       navigate(from, { replace: true });
     }
 
@@ -67,9 +66,7 @@ export default function AuthPage() {
     const { error } = await signUp(email, password, name);
 
     if (error) {
-      toast.error("Erro ao criar conta", {
-        description: error.message,
-      });
+      toast.error("Erro ao criar conta", { description: error.message });
     } else {
       toast.success("Conta criada com sucesso!", {
         description: "Verifique seu email para confirmar o cadastro.",
@@ -80,30 +77,68 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="mb-8 flex flex-col items-center gap-3">
-        <img 
-          src={gymfriendLogo} 
-          alt="GymFriend Logo" 
-          className="h-24 w-auto object-contain"
-        />
-        <p className="text-muted-foreground">Seu Parceiro de Treinos</p>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-950 via-slate-900 to-emerald-950">
+      {/* Ambient orbs */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-[-8%] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl animate-float"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute bottom-[-8%] right-[-8%] h-72 w-72 rounded-full bg-secondary/15 blur-3xl animate-float"
+        style={{ animationDelay: "2s" }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute left-[-5%] top-1/2 h-48 w-48 -translate-y-1/2 rounded-full bg-emerald-400/10 blur-3xl animate-float"
+        style={{ animationDelay: "1s" }}
+        aria-hidden
+      />
 
-      <Card className="w-full max-w-md border-border bg-card">
-        <Tabs defaultValue="login" className="w-full">
-          <CardHeader className="pb-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="register">Cadastrar</TabsTrigger>
-            </TabsList>
-          </CardHeader>
+      {/* Content */}
+      <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+        {/* Logo */}
+        <div className="mb-8 flex flex-col items-center gap-3 animate-slide-up">
+          <img
+            src={gymfriendLogo}
+            alt="GymFriend Logo"
+            className="h-28 w-auto object-contain drop-shadow-2xl"
+          />
+          <p className="text-sm font-medium tracking-wide text-white/60 uppercase">
+            Seu Parceiro de Treinos
+          </p>
+        </div>
 
-          <CardContent>
-            <TabsContent value="login" className="mt-0">
+        {/* Glassmorphism card */}
+        <div
+          className="glass w-full max-w-md rounded-2xl p-1 animate-slide-up shadow-2xl"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <Tabs defaultValue="login" className="w-full">
+            {/* Tab switcher */}
+            <div className="px-5 pt-5 pb-4">
+              <TabsList className="grid w-full grid-cols-2 bg-white/10 text-white/60">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  Entrar
+                </TabsTrigger>
+                <TabsTrigger
+                  value="register"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  Cadastrar
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* Login */}
+            <TabsContent value="login" className="mt-0 px-5 pb-6">
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="login-email" className="text-white/80 text-sm">
+                    Email
+                  </Label>
                   <Input
                     id="login-email"
                     name="email"
@@ -111,10 +146,13 @@ export default function AuthPage() {
                     placeholder="seu@email.com"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="login-password" className="text-white/80 text-sm">
+                    Senha
+                  </Label>
                   <Input
                     id="login-password"
                     name="password"
@@ -122,26 +160,26 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full touch-target"
+                  className="w-full touch-target mt-2 bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90 transition-all"
                   disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Entrar"
-                  )}
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="register" className="mt-0">
+            {/* Register */}
+            <TabsContent value="register" className="mt-0 px-5 pb-6">
               <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="register-name">Nome</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-name" className="text-white/80 text-sm">
+                    Nome
+                  </Label>
                   <Input
                     id="register-name"
                     name="name"
@@ -149,10 +187,13 @@ export default function AuthPage() {
                     placeholder="Seu nome"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-email" className="text-white/80 text-sm">
+                    Email
+                  </Label>
                   <Input
                     id="register-email"
                     name="email"
@@ -160,10 +201,13 @@ export default function AuthPage() {
                     placeholder="seu@email.com"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password">Senha</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-password" className="text-white/80 text-sm">
+                    Senha
+                  </Label>
                   <Input
                     id="register-password"
                     name="password"
@@ -171,10 +215,13 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-confirm">Confirmar Senha</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="register-confirm" className="text-white/80 text-sm">
+                    Confirmar Senha
+                  </Label>
                   <Input
                     id="register-confirm"
                     name="confirmPassword"
@@ -182,24 +229,21 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     disabled={isLoading}
+                    className="border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/40"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full touch-target"
+                  className="w-full touch-target mt-2 bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90 transition-all"
                   disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Criar Conta"
-                  )}
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar Conta"}
                 </Button>
               </form>
             </TabsContent>
-          </CardContent>
-        </Tabs>
-      </Card>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

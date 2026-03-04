@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, LogOut, Camera, User, Dumbbell, Calendar, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -118,6 +117,21 @@ export default function ProfilePage() {
       }
 
       const file = event.target.files[0];
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Formato inválido. Use JPG, PNG ou WebP.");
+        event.target.value = "";
+        return;
+      }
+
+      const maxSizeBytes = 2 * 1024 * 1024; // 2 MB
+      if (file.size > maxSizeBytes) {
+        toast.error("Arquivo muito grande. Máximo 2MB.");
+        event.target.value = "";
+        return;
+      }
+
       const fileExt = file.name.split(".").pop();
       const filePath = `${user?.id}/avatar.${fileExt}`;
 
@@ -167,13 +181,13 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto max-w-2xl px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Perfil</h1>
+        <h1 className="text-2xl font-bold text-white">Perfil</h1>
       </div>
 
       <div className="space-y-6">
         {/* Avatar Section */}
-        <Card>
-          <CardContent className="flex flex-col items-center py-8">
+        <div className="glass rounded-2xl shadow-xl">
+          <div className="flex flex-col items-center py-8 px-4">
             <div className="relative mb-4">
               <Avatar className="h-24 w-24">
                 <AvatarImage src={profile?.avatar_url || undefined} />
@@ -207,18 +221,18 @@ export default function ProfilePage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome"
-                  className="text-center"
+                  className="text-center border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary"
                 />
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 border-white/20 bg-white/10 text-white hover:bg-white/20"
                     onClick={() => setIsEditing(false)}
                   >
                     Cancelar
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="flex-1 bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90"
                     onClick={() => updateMutation.mutate(name)}
                     disabled={updateMutation.isPending}
                   >
@@ -228,54 +242,46 @@ export default function ProfilePage() {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-white">
                   {profile?.name || "Usuário"}
                 </h2>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <p className="text-sm text-white/60">{user?.email}</p>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-2"
+                  className="mt-2 text-white/70 hover:text-white hover:bg-white/10"
                   onClick={() => setIsEditing(true)}
                 >
                   Editar nome
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Dumbbell className="h-4 w-4 text-primary" />
-                Treinos Criados
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats?.workouts || 0}</p>
-            </CardContent>
-          </Card>
+          <div className="glass rounded-2xl shadow-xl p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-white/60 mb-2">
+              <Dumbbell className="h-4 w-4 text-primary" />
+              Treinos Criados
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.workouts || 0}</p>
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Calendar className="h-4 w-4 text-primary" />
-                Sessões Realizadas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats?.sessions || 0}</p>
-            </CardContent>
-          </Card>
+          <div className="glass rounded-2xl shadow-xl p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-white/60 mb-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              Sessões Realizadas
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.sessions || 0}</p>
+          </div>
         </div>
 
         {/* Install PWA */}
         {!isInstalled && (
           <Button
-            className="w-full touch-target"
+            className="w-full touch-target bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90"
             onClick={deferredPrompt ? handleInstall : undefined}
             disabled={!deferredPrompt}
             title={!deferredPrompt ? "Acesse pela URL publicada para instalar" : undefined}
@@ -288,7 +294,7 @@ export default function ProfilePage() {
         {/* Logout */}
         <Button
           variant="outline"
-          className="w-full touch-target text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          className="w-full touch-target border-white/20 bg-white/10 text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

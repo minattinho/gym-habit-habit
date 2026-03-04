@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Play, Pencil, Copy, Trash2, Loader2, Dumbbell, Trophy, Timer } from "lucide-react";
 import { toast } from "sonner";
@@ -62,19 +61,27 @@ export default function WorkoutsPage() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      if (!workoutsData || workoutsData.length === 0) return [] as Workout[];
 
-      const workoutsWithCounts = await Promise.all(
-        (workoutsData || []).map(async (workout) => {
-          const { count } = await supabase
-            .from("workout_exercises")
-            .select("*", { count: "exact", head: true })
-            .eq("workout_id", workout.id);
+      // Single query to count exercises for all workouts at once
+      const workoutIds = workoutsData.map((w) => w.id);
+      const { data: exerciseRows } = await supabase
+        .from("workout_exercises")
+        .select("workout_id")
+        .in("workout_id", workoutIds);
 
-          return { ...workout, exercise_count: count || 0 };
-        })
+      const countMap = (exerciseRows || []).reduce<Record<string, number>>(
+        (acc, row) => {
+          acc[row.workout_id] = (acc[row.workout_id] || 0) + 1;
+          return acc;
+        },
+        {}
       );
 
-      return workoutsWithCounts as Workout[];
+      return workoutsData.map((w) => ({
+        ...w,
+        exercise_count: countMap[w.id] || 0,
+      })) as Workout[];
     },
     enabled: !!user,
   });
@@ -288,10 +295,10 @@ export default function WorkoutsPage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8 pb-32">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between animate-slide-up">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Meus Treinos</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-white">Meus Treinos</h1>
+          <p className="text-white/60 mt-1">
             {workouts?.length || 0} treino{workouts?.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -305,16 +312,17 @@ export default function WorkoutsPage() {
       {activeSession && (
         <Link
           to={`/session/${activeSession.id}`}
-          className="mb-6 flex items-center gap-3 rounded-card border border-primary/30 bg-primary/10 p-4 shadow-sm transition-all hover:bg-primary/15 hover:shadow-md"
+          className="mb-6 flex items-center gap-3 rounded-2xl glass border border-primary/30 p-4 shadow-sm transition-all hover:bg-primary/10 hover:shadow-md animate-slide-up"
+          style={{ animationDelay: "0.05s" }}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
             <Timer className="h-5 w-5 text-primary animate-pulse" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground truncate">
+            <p className="font-semibold text-white truncate">
               {activeSession.workout_name || "Treino"} em andamento
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white/60">
               Iniciado {new Date(activeSession.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
@@ -329,28 +337,29 @@ export default function WorkoutsPage() {
       )}
 
       {workouts?.length === 0 ? (
-        <Card className="border-dashed bg-muted/30">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 rounded-full bg-background p-4 shadow-sm">
+        <div className="glass rounded-2xl border border-dashed border-white/20">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div className="mb-4 rounded-full bg-white/10 p-4">
               <Dumbbell className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="mb-2 text-xl font-semibold">Nenhum treino ainda</h3>
-            <p className="mb-6 max-w-xs text-sm text-muted-foreground">
+            <h3 className="mb-2 text-xl font-semibold text-white">Nenhum treino ainda</h3>
+            <p className="mb-6 max-w-xs text-sm text-white/60">
               Crie seu primeiro treino para começar a acompanhar seu progresso
             </p>
-            <Button asChild size="lg" className="rounded-full px-8">
+            <Button asChild size="lg" className="rounded-full px-8 bg-gradient-to-r from-primary to-emerald-400 font-semibold shadow-lg glow-primary hover:opacity-90">
               <Link to="/workout/new">
                 Criar Treino
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
-          {workouts?.map((workout) => (
+          {workouts?.map((workout, index) => (
             <div
               key={workout.id}
-              className="group relative overflow-hidden rounded-card border bg-card text-card-foreground shadow-soft transition-all hover:translate-y-[-2px] hover:shadow-lg"
+              className="group relative overflow-hidden rounded-2xl glass shadow-xl transition-all hover:translate-y-[-2px] hover:shadow-2xl animate-slide-up"
+              style={{ animationDelay: `${index * 0.06}s` }}
             >
               <div
                 className="absolute inset-x-0 top-0 h-1.5 opacity-90"
@@ -360,11 +369,11 @@ export default function WorkoutsPage() {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h3 className="line-clamp-1 text-xl font-bold tracking-tight text-foreground">
+                    <h3 className="line-clamp-1 text-xl font-bold tracking-tight text-white">
                       {workout.name}
                     </h3>
                     {workout.description && (
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      <p className="mt-1 line-clamp-2 text-sm text-white/60">
                         {workout.description}
                       </p>
                     )}
@@ -394,7 +403,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-10 w-full hover:bg-muted"
+                      className="h-10 w-full border-white/20 bg-white/10 text-white hover:bg-white/20"
                       asChild
                     >
                       <Link to={`/workout/${workout.id}`}>
@@ -405,7 +414,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-10 w-full hover:bg-muted"
+                      className="h-10 w-full border-white/20 bg-white/10 text-white hover:bg-white/20"
                       onClick={() => duplicateMutation.mutate(workout)}
                       disabled={duplicateMutation.isPending}
                     >
@@ -415,7 +424,7 @@ export default function WorkoutsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-10 w-full hover:bg-destructive/10 hover:text-destructive"
+                      className="h-10 w-full text-white/70 hover:bg-destructive/20 hover:text-destructive"
                       onClick={() => setDeleteWorkoutId(workout.id)}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" />
