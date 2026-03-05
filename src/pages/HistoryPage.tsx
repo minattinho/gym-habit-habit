@@ -48,6 +48,7 @@ export default function HistoryPage() {
       const { data, error } = await supabase
         .from("training_sessions")
         .select("*")
+        .eq("user_id", user!.id)
         .order("started_at", { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
