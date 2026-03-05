@@ -42,6 +42,12 @@ import { RestTimer } from "@/components/RestTimer";
 import { NumberStepper } from "@/components/ui/number-stepper";
 
 import { checkAndSubmitPRs, SessionSet, SessionExercise } from "@/lib/pr";
+import {
+  enqueueUpdateSet,
+  enqueueAddSet,
+  enqueueRemoveSet,
+  enqueueFinishSession,
+} from "@/lib/offlineQueue";
 
 // Sortable Exercise Card Component
 function SortableExerciseCard({
@@ -405,6 +411,11 @@ export default function SessionPage() {
       setId: string;
       updates: Partial<SessionSet>;
     }) => {
+      if (!navigator.onLine) {
+        // Queue and let optimistic update stand — don't throw
+        enqueueUpdateSet(setId, updates as Record<string, unknown>);
+        return;
+      }
       const { error } = await supabase
         .from("session_sets")
         .update(updates)
@@ -443,14 +454,14 @@ export default function SessionPage() {
       return { previousSession };
     },
     onError: (_err, _variables, context: any) => {
-      // Rollback on error
+      // Rollback on error (only for online failures — offline path never throws)
       if (context?.previousSession) {
         queryClient.setQueryData(["session", id], context.previousSession);
       }
     },
     onSettled: (_data, _error, variables) => {
-      // Only refetch for is_completed changes (structural change)
-      if (variables.updates.is_completed !== undefined) {
+      // Only refetch when online and a structural change occurred
+      if (navigator.onLine && variables.updates.is_completed !== undefined) {
         queryClient.invalidateQueries({ queryKey: ["session", id] });
       }
     },
@@ -462,30 +473,77 @@ export default function SessionPage() {
         (ex: SessionExercise) => ex.id === sessionExerciseId
       );
       const lastSet = exercise?.session_sets[exercise.session_sets.length - 1];
+      const orderIndex = exercise?.session_sets.length || 0;
+      const weight = lastSet?.weight ?? null;
+      const reps = lastSet?.reps ?? null;
+
+      if (!navigator.onLine) {
+        enqueueAddSet(sessionExerciseId, weight, reps, orderIndex);
+        // Optimistically add a temp set so the user sees it immediately
+        const tempId = `tmp_${crypto.randomUUID()}`;
+        queryClient.setQueryData(["session", id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            exercises: old.exercises.map((ex: any) =>
+              ex.id === sessionExerciseId
+                ? {
+                    ...ex,
+                    session_sets: [
+                      ...ex.session_sets,
+                      { id: tempId, session_exercise_id: sessionExerciseId, order_index: orderIndex, weight, reps, is_completed: false, notes: null, rpe: null, created_at: new Date().toISOString() },
+                    ],
+                  }
+                : ex
+            ),
+          };
+        });
+        return;
+      }
 
       const { error } = await supabase.from("session_sets").insert({
         session_exercise_id: sessionExerciseId,
-        order_index: (exercise?.session_sets.length || 0),
-        weight: lastSet?.weight || null,
-        reps: lastSet?.reps || null,
+        order_index: orderIndex,
+        weight,
+        reps,
         is_completed: false,
       });
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session", id] });
+    onSuccess: (_data, _vars, _ctx) => {
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ["session", id] });
+      }
     },
   });
 
   // Remove a set from an exercise
   const removeSetMutation = useMutation({
     mutationFn: async ({ setId, sessionExerciseId }: { setId: string; sessionExerciseId: string }) => {
+      if (!navigator.onLine) {
+        enqueueRemoveSet(setId);
+        // Optimistically remove from cache
+        queryClient.setQueryData(["session", id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            exercises: old.exercises.map((ex: any) =>
+              ex.id === sessionExerciseId
+                ? { ...ex, session_sets: ex.session_sets.filter((s: any) => s.id !== setId) }
+                : ex
+            ),
+          };
+        });
+        return;
+      }
       const { error } = await supabase.from("session_sets").delete().eq("id", setId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session", id] });
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ["session", id] });
+      }
     },
   });
 
@@ -601,10 +659,17 @@ export default function SessionPage() {
 
   const finishSessionMutation = useMutation({
     mutationFn: async () => {
+      const completedAt = new Date().toISOString();
+
+      if (!navigator.onLine) {
+        enqueueFinishSession(id!, completedAt, elapsedTime);
+        return { queued: true };
+      }
+
       const { error } = await supabase
         .from("training_sessions")
         .update({
-          completed_at: new Date().toISOString(),
+          completed_at: completedAt,
           duration_seconds: elapsedTime,
         })
         .eq("id", id);
@@ -618,9 +683,15 @@ export default function SessionPage() {
           toast.success(`Parabéns! Você bateu ${prCount} novo(s) recorde(s)! 🏆`);
         }
       }
+
+      return { queued: false };
     },
-    onSuccess: () => {
-      toast.success("Treino finalizado! 💪");
+    onSuccess: (result) => {
+      if (result?.queued) {
+        toast.warning("Sem conexão — treino salvo localmente e será sincronizado quando voltar online.");
+      } else {
+        toast.success("Treino finalizado! 💪");
+      }
       navigate("/");
     },
     onError: () => {

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 // Lazy-loaded pages for code splitting
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
@@ -32,6 +34,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function AppShell({ children }: { children: React.ReactNode }) {
+  useOfflineSync();
+  return (
+    <>
+      <OfflineBanner />
+      {children}
+    </>
+  );
+}
+
 function PageLoader() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
@@ -50,6 +62,7 @@ function AuthRedirect() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AppShell>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -109,6 +122,7 @@ const App = () => (
         </ErrorBoundary>
       </TooltipProvider>
     </AuthProvider>
+    </AppShell>
   </QueryClientProvider>
 );
 
