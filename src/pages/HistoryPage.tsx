@@ -4,13 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Calendar, Clock, ChevronRight } from "lucide-react";
+import { Loader2, Calendar, Clock, ChevronRight, GitCompareArrows } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
+import { SessionCompareSheet } from "@/components/history/SessionCompareSheet";
 
 interface TrainingSession {
   id: string;
+  workout_id: string | null;
   workout_name: string | null;
   started_at: string;
   completed_at: string | null;
@@ -25,6 +27,7 @@ export default function HistoryPage() {
   const [page, setPage] = useState(0);
   const [allSessions, setAllSessions] = useState<TrainingSession[]>([]);
   const [hasMore, setHasMore] = useState(true);
+  const [compareSessionId, setCompareSessionId] = useState<string | null>(null);
 
   const { data: total } = useQuery({
     queryKey: ["training_sessions_count"],
@@ -148,7 +151,23 @@ export default function HistoryPage() {
                         locale: ptBR,
                       })}
                     </p>
-                    <ChevronRight className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
+                    <div className="flex items-center gap-2">
+                      {session.completed_at && session.workout_id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 gap-1.5 px-2 text-xs text-white/50 hover:text-white hover:bg-white/10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCompareSessionId(session.id);
+                          }}
+                        >
+                          <GitCompareArrows className="h-3.5 w-3.5" />
+                          Comparar
+                        </Button>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -170,6 +189,11 @@ export default function HistoryPage() {
           )}
         </div>
       )}
+
+      <SessionCompareSheet
+        sessionId={compareSessionId}
+        onClose={() => setCompareSessionId(null)}
+      />
     </div>
   );
 }

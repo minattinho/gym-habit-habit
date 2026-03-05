@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Loader2, Dumbbell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, Loader2, Dumbbell, Plus } from "lucide-react";
+import { CreateExerciseDialog } from "./CreateExerciseDialog";
 
 interface Exercise {
   id: string;
@@ -52,6 +54,7 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: exercises, isLoading } = useQuery({
     queryKey: ["exercises"],
@@ -81,11 +84,27 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
     onSelect(exercise.id, exercise.name, exercise.image_url);
   };
 
+  const handleCreated = (id: string, name: string, imageUrl: string | null) => {
+    setShowCreateDialog(false);
+    onSelect(id, name, imageUrl);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent side="bottom" className="h-[85vh]">
         <SheetHeader className="text-left">
-          <SheetTitle>Adicionar Exercício</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle>Adicionar Exercício</SheetTitle>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => setShowCreateDialog(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Criar
+            </Button>
+          </div>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
@@ -124,11 +143,20 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filteredExercises?.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Dumbbell className="mb-4 h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <Dumbbell className="h-12 w-12 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   Nenhum exercício encontrado
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowCreateDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  {search.trim() ? `Criar "${search.trim()}"` : "Criar exercício"}
+                </Button>
               </div>
             ) : (
               <div className="space-y-2 pr-4">
@@ -151,8 +179,15 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
                           <Dumbbell className="h-5 w-5 text-muted-foreground" />
                         )}
                       </div>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{exercise.name}</span>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{exercise.name}</span>
+                          {!exercise.is_global && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                              Meu
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {MUSCLE_GROUP_LABELS[exercise.muscle_group] || exercise.muscle_group}
                         </span>
@@ -165,6 +200,13 @@ export function ExerciseSelector({ open, onClose, onSelect }: ExerciseSelectorPr
           </ScrollArea>
         </div>
       </SheetContent>
+
+      <CreateExerciseDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onCreated={handleCreated}
+        initialName={search.trim()}
+      />
     </Sheet>
   );
 }
