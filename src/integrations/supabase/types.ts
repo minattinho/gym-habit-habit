@@ -421,6 +421,7 @@ export type Database = {
           name: string
           updated_at: string
           user_id: string
+          weekly_order: number | null
         }
         Insert: {
           color?: string | null
@@ -430,6 +431,7 @@ export type Database = {
           name: string
           updated_at?: string
           user_id: string
+          weekly_order?: number | null
         }
         Update: {
           color?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string
+          weekly_order?: number | null
         }
         Relationships: []
       }

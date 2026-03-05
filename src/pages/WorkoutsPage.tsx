@@ -25,6 +25,7 @@ interface Workout {
   description: string | null;
   color: string | null;
   created_at: string;
+  weekly_order: number | null;
   exercise_count?: number;
 }
 
@@ -58,7 +59,7 @@ export default function WorkoutsPage() {
       const { data: workoutsData, error } = await supabase
         .from("workouts")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("weekly_order", { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       if (!workoutsData || workoutsData.length === 0) return [] as Workout[];

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Loader2, GripVertical, Copy, X, MessageSquare, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { ExerciseSelector } from "@/components/exercise/ExerciseSelector";
@@ -49,6 +50,7 @@ export default function WorkoutFormPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(COLORS[0]);
+  const [weeklyOrder, setWeeklyOrder] = useState<string>("");
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
 
@@ -113,6 +115,7 @@ export default function WorkoutFormPage() {
       setName(workout.name);
       setDescription(workout.description || "");
       setColor(workout.color || COLORS[0]);
+      setWeeklyOrder(workout.weekly_order != null ? String(workout.weekly_order) : "");
       setExercises(exercisesWithSets);
 
       return workout;
@@ -124,11 +127,13 @@ export default function WorkoutFormPage() {
     mutationFn: async () => {
       let workoutId = id;
 
+      const weekly_order = weeklyOrder !== "" ? parseInt(weeklyOrder, 10) : null;
+
       if (isEditing) {
         // Update workout
         const { error: workoutError } = await supabase
           .from("workouts")
-          .update({ name, description, color })
+          .update({ name, description, color, weekly_order })
           .eq("id", id);
 
         if (workoutError) throw workoutError;
@@ -141,7 +146,7 @@ export default function WorkoutFormPage() {
         // Create workout
         const { data: workout, error: workoutError } = await supabase
           .from("workouts")
-          .insert({ name, description, color, user_id: user!.id })
+          .insert({ name, description, color, user_id: user!.id, weekly_order })
           .select()
           .single();
 
@@ -304,6 +309,25 @@ export default function WorkoutFormPage() {
                   placeholder="Descreva seu treino..."
                   rows={2}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ordem na semana (opcional)</Label>
+                <Select value={weeklyOrder} onValueChange={setWeeklyOrder}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a posição na rotação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}º treino da semana
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define a sequência de rotação. Treino 1 → 2 → 3...
+                </p>
               </div>
 
               <div className="space-y-2">

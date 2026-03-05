@@ -292,6 +292,7 @@ export default function SessionPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showFinishDialog, setShowFinishDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
@@ -627,6 +628,23 @@ export default function SessionPage() {
     },
   });
 
+  const cancelSessionMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("training_sessions")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Treino encerrado sem salvar.");
+      navigate("/");
+    },
+    onError: () => {
+      toast.error("Erro ao encerrar treino");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
@@ -695,7 +713,7 @@ export default function SessionPage() {
       {/* Finish Button */}
       {!isCompleted && (
         <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-4 backdrop-blur safe-bottom shadow-lg z-50">
-          <div className="container max-w-2xl">
+          <div className="container max-w-2xl flex flex-col gap-2">
             <Button
               className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform"
               size="lg"
@@ -703,6 +721,13 @@ export default function SessionPage() {
             >
               <CheckCircle className="mr-2 h-5 w-5" />
               FINALIZAR TREINO
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full h-10 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setShowCancelDialog(true)}
+            >
+              Encerrar sem salvar
             </Button>
           </div>
         </div>
@@ -727,6 +752,34 @@ export default function SessionPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 "Sim, finalizar"
+              )}
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full rounded-xl h-11 border-transparent text-muted-foreground hover:bg-muted">
+              Continuar treinando
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent className="rounded-2xl max-w-xs mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center">Encerrar sem salvar?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Todo o progresso desta sessão será perdido e não poderá ser recuperado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col space-y-2 sm:space-y-0">
+            <AlertDialogAction
+              className="w-full rounded-xl h-11 bg-destructive text-destructive-foreground font-bold hover:bg-destructive/90"
+              onClick={() => cancelSessionMutation.mutate()}
+              disabled={cancelSessionMutation.isPending}
+            >
+              {cancelSessionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sim, descartar treino"
               )}
             </AlertDialogAction>
             <AlertDialogCancel className="w-full rounded-xl h-11 border-transparent text-muted-foreground hover:bg-muted">

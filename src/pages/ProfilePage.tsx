@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, LogOut, Camera, User, Dumbbell, Calendar, Download } from "lucide-react";
+import { Loader2, LogOut, Camera, Dumbbell, Calendar, Download, Pencil, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface Profile {
@@ -32,7 +31,6 @@ export default function ProfilePage() {
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
@@ -112,9 +110,7 @@ export default function ProfilePage() {
     try {
       setUploading(true);
 
-      if (!event.target.files || event.target.files.length === 0) {
-        return;
-      }
+      if (!event.target.files || event.target.files.length === 0) return;
 
       const file = event.target.files[0];
 
@@ -125,7 +121,7 @@ export default function ProfilePage() {
         return;
       }
 
-      const maxSizeBytes = 2 * 1024 * 1024; // 2 MB
+      const maxSizeBytes = 2 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
         toast.error("Arquivo muito grande. Máximo 2MB.");
         event.target.value = "";
@@ -135,19 +131,16 @@ export default function ProfilePage() {
       const fileExt = file.name.split(".").pop();
       const filePath = `${user?.id}/avatar.${fileExt}`;
 
-      // Upload file
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // Update profile
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
@@ -179,127 +172,159 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Perfil</h1>
+    <div className="container mx-auto max-w-2xl px-4 py-6 pb-28">
+
+      {/* Hero Card */}
+      <div className="glass rounded-2xl shadow-2xl overflow-hidden mb-5 animate-slide-up">
+        {/* Banner gradient */}
+        <div className="h-28 bg-gradient-to-br from-emerald-600/50 via-primary/30 to-secondary/40 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
+          {/* Decorative circles */}
+          <div className="pointer-events-none absolute -top-6 -right-6 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-4 left-8 h-20 w-20 rounded-full bg-secondary/20 blur-xl" />
+        </div>
+
+        {/* Avatar + info */}
+        <div className="flex flex-col items-center px-6 pb-8 -mt-14">
+          <div className="relative mb-4">
+            {/* Glow ring */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-emerald-400 blur-lg opacity-50 scale-110" />
+            <Avatar className="h-28 w-28 relative ring-4 ring-black/40 shadow-2xl">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-emerald-400 text-3xl font-bold text-white">
+                {profile?.name?.charAt(0)?.toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <label
+              htmlFor="avatar-upload"
+              className="absolute bottom-1 right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform hover:scale-110 glow-primary"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+            </label>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={uploadAvatar}
+              disabled={uploading}
+            />
+          </div>
+
+          {isEditing ? (
+            <div className="flex w-full max-w-xs flex-col gap-3 mt-1">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Seu nome"
+                className="text-center border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-white/20 bg-white/10 text-white hover:bg-white/20"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90"
+                  onClick={() => updateMutation.mutate(name)}
+                  disabled={updateMutation.isPending}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center mt-1">
+              <h2 className="text-2xl font-bold gradient-text">
+                {profile?.name || "Usuário"}
+              </h2>
+              <p className="text-sm text-white/50 mt-1">{user?.email}</p>
+              <button
+                className="mt-3 flex items-center gap-1.5 mx-auto text-xs text-white/40 hover:text-primary transition-colors"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="h-3 w-3" />
+                Editar nome
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Avatar Section */}
-        <div className="glass rounded-2xl shadow-xl">
-          <div className="flex flex-col items-center py-8 px-4">
-            <div className="relative mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
-                  {profile?.name?.charAt(0)?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <label
-                htmlFor="avatar-upload"
-                className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
-              >
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={uploadAvatar}
-                disabled={uploading}
-              />
-            </div>
-
-            {isEditing ? (
-              <div className="flex w-full max-w-xs flex-col gap-2">
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome"
-                  className="text-center border-white/10 bg-white/10 text-white placeholder:text-white/30 focus-visible:border-primary"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-white/20 bg-white/10 text-white hover:bg-white/20"
-                    onClick={() => setIsEditing(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90"
-                    onClick={() => updateMutation.mutate(name)}
-                    disabled={updateMutation.isPending}
-                  >
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-xl font-semibold text-white">
-                  {profile?.name || "Usuário"}
-                </h2>
-                <p className="text-sm text-white/60">{user?.email}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-white/70 hover:text-white hover:bg-white/10"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Editar nome
-                </Button>
-              </>
-            )}
+      {/* Stats */}
+      <div
+        className="grid grid-cols-2 gap-4 mb-5 animate-slide-up"
+        style={{ animationDelay: "0.07s" }}
+      >
+        <div className="glass rounded-2xl shadow-xl p-5 relative overflow-hidden">
+          <div className="pointer-events-none absolute top-0 right-0 h-20 w-20 -translate-y-1/2 translate-x-1/2 rounded-full bg-primary/20 blur-xl" />
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-3">
+            <Dumbbell className="h-3.5 w-3.5 text-primary" />
+            Treinos
           </div>
+          <p className="text-5xl font-bold text-white tabular-nums leading-none">
+            {stats?.workouts || 0}
+          </p>
+          <p className="text-xs text-white/40 mt-2">criados</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="glass rounded-2xl shadow-xl p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-white/60 mb-2">
-              <Dumbbell className="h-4 w-4 text-primary" />
-              Treinos Criados
-            </div>
-            <p className="text-3xl font-bold text-white">{stats?.workouts || 0}</p>
+        <div className="glass rounded-2xl shadow-xl p-5 relative overflow-hidden">
+          <div className="pointer-events-none absolute top-0 right-0 h-20 w-20 -translate-y-1/2 translate-x-1/2 rounded-full bg-secondary/20 blur-xl" />
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-3">
+            <Calendar className="h-3.5 w-3.5 text-secondary" />
+            Sessões
           </div>
-
-          <div className="glass rounded-2xl shadow-xl p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-white/60 mb-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              Sessões Realizadas
-            </div>
-            <p className="text-3xl font-bold text-white">{stats?.sessions || 0}</p>
-          </div>
+          <p className="text-5xl font-bold text-white tabular-nums leading-none">
+            {stats?.sessions || 0}
+          </p>
+          <p className="text-xs text-white/40 mt-2">realizadas</p>
         </div>
+      </div>
 
-        {/* Install PWA */}
+      {/* Actions */}
+      <div
+        className="space-y-3 animate-slide-up"
+        style={{ animationDelay: "0.12s" }}
+      >
         {!isInstalled && (
-          <Button
-            className="w-full touch-target bg-gradient-to-r from-primary to-emerald-400 font-semibold text-white shadow-lg glow-primary hover:opacity-90"
+          <button
+            className="w-full glass rounded-2xl p-4 flex items-center gap-4 border border-white/10 hover:bg-white/[0.08] transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={deferredPrompt ? handleInstall : undefined}
             disabled={!deferredPrompt}
             title={!deferredPrompt ? "Acesse pela URL publicada para instalar" : undefined}
           >
-            <Download className="mr-2 h-4 w-4" />
-            {deferredPrompt ? "Instalar App" : "Instalar App (publique e acesse pelo navegador)"}
-          </Button>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors">
+              <Download className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-semibold text-white text-sm">Instalar App</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                {deferredPrompt ? "Adicionar à tela inicial" : "Publique e acesse pelo navegador"}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-white/50 transition-colors" />
+          </button>
         )}
 
-        {/* Logout */}
-        <Button
-          variant="outline"
-          className="w-full touch-target border-white/20 bg-white/10 text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+        <button
+          className="w-full glass rounded-2xl p-4 flex items-center gap-4 border border-red-500/20 hover:bg-red-500/10 transition-all group"
           onClick={handleLogout}
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair da Conta
-        </Button>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
+            <LogOut className="h-5 w-5 text-red-400" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="font-semibold text-red-400 text-sm">Sair da Conta</p>
+            <p className="text-xs text-white/40 mt-0.5">Encerrar sessão atual</p>
+          </div>
+        </button>
       </div>
     </div>
   );
